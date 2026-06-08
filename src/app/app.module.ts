@@ -1,7 +1,9 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { MockInterceptor } from './core/interceptors/mock.interceptor';
+import { environment } from '../environments/environment';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
@@ -47,7 +49,11 @@ import { WhatsappComponent } from './shared/components/whatsapp/whatsapp.compone
     ReactiveFormsModule,
     AppRoutingModule,
   ],
-  providers: [],
+  providers: [
+    ...(!environment.production
+      ? [{ provide: HTTP_INTERCEPTORS, useClass: MockInterceptor, multi: true }]
+      : [])
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule {}
