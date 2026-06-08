@@ -1,8 +1,8 @@
-<div class="app-container">
-  <app-sidebar></app-sidebar>
-  <div class="main-container">
-    <app-topbar></app-topbar>
-    <div class="content-container">
+<div [class.app-container]="showLayout">
+  <app-sidebar *ngIf="showLayout"></app-sidebar>
+  <div [class.main-container]="showLayout">
+    <app-topbar *ngIf="showLayout"></app-topbar>
+    <div [class.content-container]="showLayout">
       <router-outlet></router-outlet>
     </div>
   </div>

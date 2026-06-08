@@ -2,6 +2,8 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router, NavigationEnd, ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { filter, map, mergeMap } from 'rxjs/operators';
+import { AuthService } from '../../../core/services/auth.service';
+import { User } from '../../../core/models/auth.models';
 
 @Component({
   selector: 'app-topbar',
@@ -9,15 +11,18 @@ import { filter, map, mergeMap } from 'rxjs/operators';
   styleUrls: ['./topbar.component.css'],
 })
 export class TopbarComponent implements OnInit, OnDestroy {
-  title = 'Tableau de bord';
-  breadcrumb = "Vue d'ensemble";
+  title = '';
+  breadcrumb = '';
   private sub!: Subscription;
 
-  constructor(private router: Router, private activatedRoute: ActivatedRoute) {}
+  constructor(
+    private router: Router,
+    private activatedRoute: ActivatedRoute,
+    public authService: AuthService
+  ) {}
 
   ngOnInit(): void {
     this.updateFromRoute();
-
     this.sub = this.router.events.pipe(
       filter(e => e instanceof NavigationEnd),
       map(() => {
@@ -25,7 +30,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
         while (route.firstChild) route = route.firstChild;
         return route;
       }),
-      mergeMap(route => route.data)
+      mergeMap(r => r.data)
     ).subscribe(data => {
       this.title      = data['title']      || '';
       this.breadcrumb = data['breadcrumb'] || '';
@@ -40,6 +45,10 @@ export class TopbarComponent implements OnInit, OnDestroy {
       this.breadcrumb = data['breadcrumb'] || this.breadcrumb;
     });
   }
+
+  get user(): User | null { return this.authService.getCurrentUser(); }
+
+  logout(): void { this.authService.logout(); }
 
   ngOnDestroy(): void { this.sub?.unsubscribe(); }
 }

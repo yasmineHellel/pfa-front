@@ -1,0 +1,98 @@
+<div class="login-page">
+
+  <!-- Left panel -->
+  <div class="login-left">
+    <div class="login-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="#0d1117" width="22" height="22">
+          <path d="M7 4h10l2 6H5L7 4zm0 0L5 10H3l1 8h16l1-8h-2L17 4H7zM9 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm8 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">Garage CRM</div>
+        <div class="brand-badge">PRO</div>
+      </div>
+    </div>
+
+    <h1 class="left-title">Gérez votre garage<br>en toute simplicité.</h1>
+    <p class="left-sub">Réparations · Clients · Stock · Facturation</p>
+
+    <div class="features">
+      <div class="feature-item">
+        <span class="feat-dot green"></span> Tableau de bord en temps réel
+      </div>
+      <div class="feature-item">
+        <span class="feat-dot amber"></span> Gestion des réparations et mécaniciens
+      </div>
+      <div class="feature-item">
+        <span class="feat-dot blue"></span> Facturation et suivi des paiements
+      </div>
+    </div>
+  </div>
+
+  <!-- Right panel : form -->
+  <div class="login-right">
+    <div class="login-card">
+      <h2 class="card-title">Connexion</h2>
+      <p class="card-sub">Accédez à votre espace de travail</p>
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="field">
+          <label>Adresse email</label>
+          <input
+            type="email"
+            formControlName="email"
+            placeholder="vous@exemple.com"
+            [class.field-error]="form.get('email')?.invalid && form.get('email')?.touched"
+          >
+          <span class="err-msg" *ngIf="form.get('email')?.invalid && form.get('email')?.touched">
+            Email invalide
+          </span>
+        </div>
+
+        <div class="field">
+          <label>Mot de passe</label>
+          <div class="pwd-wrap">
+            <input
+              [type]="showPassword ? 'text' : 'password'"
+              formControlName="password"
+              placeholder="••••••••"
+              [class.field-error]="form.get('password')?.invalid && form.get('password')?.touched"
+            >
+            <button type="button" class="pwd-toggle" (click)="showPassword = !showPassword" tabindex="-1">
+              <svg *ngIf="!showPassword" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+              <svg *ngIf="showPassword" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            </button>
+          </div>
+          <span class="err-msg" *ngIf="form.get('password')?.invalid && form.get('password')?.touched">
+            Mot de passe requis
+          </span>
+        </div>
+
+        <div class="api-error" *ngIf="error">{{ error }}</div>
+
+        <button type="submit" class="btn-submit" [disabled]="loading">
+          <span *ngIf="!loading">Se connecter</span>
+          <span *ngIf="loading" class="spinner"></span>
+        </button>
+      </form>
+
+      <!-- Demo shortcuts -->
+      <div class="demo-section">
+        <div class="demo-label">Comptes de démonstration</div>
+        <div class="demo-btns">
+          <button class="demo-btn admin"     (click)="fillDemo('ADMIN')">Admin</button>
+          <button class="demo-btn meca"      (click)="fillDemo('MECANICIEN')">Mécanicien</button>
+          <button class="demo-btn fournisseur" (click)="fillDemo('FOURNISSEUR')">Fournisseur</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

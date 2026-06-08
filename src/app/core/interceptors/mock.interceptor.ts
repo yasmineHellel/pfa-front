@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpInterceptor, HttpRequest, HttpHandler, HttpResponse } from '@angular/common/http';
-import { of } from 'rxjs';
+import { HttpInterceptor, HttpRequest, HttpHandler, HttpResponse, HttpErrorResponse } from '@angular/common/http';
+import { of, throwError } from 'rxjs';
 import { delay } from 'rxjs/operators';
 import {
   Client, Vehicle, Repair, Invoice, StockItem,
@@ -73,6 +73,19 @@ export class MockInterceptor implements HttpInterceptor {
 
   intercept(req: HttpRequest<any>, next: HttpHandler) {
     const url = req.url;
+
+    // ── Auth ──────────────────────────────────────────────────────────────────
+    if (url.includes('/auth/login') && req.method === 'POST') {
+      const { email, password } = req.body as { email: string; password: string };
+      const users = [
+        { email: 'admin@garage.com',       password: 'admin123', user: { id: 1, firstName: 'Admin',   lastName: 'Garage',     email: 'admin@garage.com',       role: 'ADMIN'       } },
+        { email: 'mecanicien@garage.com',  password: 'meca123',  user: { id: 2, firstName: 'Sami',    lastName: 'Khelifa',    email: 'mecanicien@garage.com',  role: 'MECANICIEN'  } },
+        { email: 'fournisseur@garage.com', password: 'four123',  user: { id: 3, firstName: 'Kamel',   lastName: 'Fournisseur',email: 'fournisseur@garage.com', role: 'FOURNISSEUR' } },
+      ];
+      const match = users.find(u => u.email === email && u.password === password);
+      if (match) return this.respond({ token: `mock-token-${match.user.role}`, user: match.user });
+      return throwError(() => new HttpErrorResponse({ status: 401, error: { message: 'Identifiants incorrects' } })).pipe(delay(300));
+    }
 
     if (url.includes('/dashboard/stats'))    return this.respond(STATS);
     if (url.includes('/dashboard/activity')) return this.respond(ACTIVITY);

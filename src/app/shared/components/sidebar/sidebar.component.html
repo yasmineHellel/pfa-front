@@ -16,7 +16,6 @@
   <!-- Nav groups -->
   <div class="sidebar-section" *ngFor="let group of navGroups">
     <div class="sidebar-label">{{ group.label }}</div>
-
     <a
       class="nav-item"
       [routerLink]="item.route"
@@ -27,21 +26,17 @@
            [innerHTML]="item.svgContent">
       </svg>
       {{ item.label }}
-      <span
-        *ngIf="item.badge"
-        class="nav-badge"
-        [class.red]="item.badgeClass === 'red'"
-      >{{ item.badge }}</span>
+      <span *ngIf="item.badge" class="nav-badge" [class.red]="item.badgeClass === 'red'">{{ item.badge }}</span>
     </a>
   </div>
 
-  <!-- Footer -->
+  <!-- Footer — current user -->
   <div class="sidebar-footer">
     <div class="user-card">
-      <div class="user-avatar">AB</div>
-      <div>
-        <div class="user-name">Auto Belhaj</div>
-        <div class="user-role">Administrateur</div>
+      <div class="user-avatar">{{ userInitials }}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="user-name">{{ user?.firstName }} {{ user?.lastName }}</div>
+        <div class="user-role">{{ roleLabel }}</div>
       </div>
     </div>
   </div>
