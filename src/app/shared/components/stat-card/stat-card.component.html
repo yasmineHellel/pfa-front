@@ -1,0 +1,13 @@
+<div class="stat-card" [ngClass]="'color-' + color">
+  <div class="stat-label">{{ label }}</div>
+  <div class="stat-value">{{ value }}</div>
+  <div class="stat-delta" [ngClass]="deltaType">
+    <svg *ngIf="deltaType === 'up'" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+      <polyline points="18 15 12 9 6 15"/>
+    </svg>
+    <svg *ngIf="deltaType === 'down'" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+      <polyline points="6 9 12 15 18 9"/>
+    </svg>
+    {{ delta }}
+  </div>
+</div>

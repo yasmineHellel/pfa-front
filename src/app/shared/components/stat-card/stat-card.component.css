@@ -1,0 +1,42 @@
+:host { display: contents; }
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-2);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  margin-bottom: 10px;
+}
+
+.stat-value {
+  font-size: 26px;
+  font-weight: 700;
+  font-family: 'Space Grotesk', sans-serif;
+  color: var(--text-1);
+  margin-bottom: 6px;
+  line-height: 1;
+}
+
+.stat-delta {
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-3);
+}
+
+.stat-delta.up   { color: var(--green); }
+.stat-delta.down { color: var(--red); }
+
+.color-amber  { border-top: 3px solid var(--accent); }
+.color-green  { border-top: 3px solid var(--green); }
+.color-blue   { border-top: 3px solid var(--blue); }
+.color-purple { border-top: 3px solid var(--purple); }

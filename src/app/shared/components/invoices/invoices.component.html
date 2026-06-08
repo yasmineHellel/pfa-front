@@ -1,0 +1,64 @@
+<div class="section-header" style="margin-bottom:16px;">
+  <div class="section-title" style="font-size:16px;">Factures</div>
+  <button class="btn btn-primary">+ Créer facture</button>
+</div>
+
+<div class="tabs">
+  <button *ngFor="let tab of tabs; let i = index" class="tab" [class.active]="activeTab === i" (click)="setTab(i)">
+    {{ tab }}
+  </button>
+</div>
+
+<div *ngIf="loading" class="text-center py-4" style="color:var(--text-3)">Chargement…</div>
+<div *ngIf="error" class="badge badge-red" style="margin-bottom:12px">{{ error }}</div>
+
+<div class="table-card" *ngIf="!loading">
+  <app-search-bar placeholder="🔍  Rechercher une facture…"></app-search-bar>
+  <table>
+    <thead>
+      <tr>
+        <th>N° Facture</th>
+        <th>Client</th>
+        <th>Date</th>
+        <th>Montant</th>
+        <th>Payé</th>
+        <th>Reste</th>
+        <th>Statut</th>
+        <th>Méthode</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let inv of filtered">
+        <td style="font-weight:600;color:var(--accent)">#{{ inv.id }}</td>
+        <td style="font-weight:500">{{ inv.clientName }}</td>
+        <td class="td-muted">{{ inv.date }}</td>
+        <td style="font-weight:600">{{ inv.amount | number }} TND</td>
+        <td [style.color]="inv.paid > 0 ? 'var(--green)' : 'inherit'">
+          {{ inv.paid > 0 ? (inv.paid | number) + ' TND' : '0' }}
+        </td>
+        <td [style.color]="inv.remaining > 0 ? 'var(--red)' : 'inherit'" style="font-weight:600">
+          {{ inv.remaining > 0 ? (inv.remaining | number) + ' TND' : '0' }}
+        </td>
+        <td><span class="badge" [ngClass]="statusBadge(inv.status)">{{ statusLabel(inv.status) }}</span></td>
+        <td class="td-muted">{{ inv.paymentMethod }}</td>
+        <td>
+          <div class="action-group">
+            <button class="action-btn" title="PDF">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+            </button>
+            <button class="action-btn" title="Signature">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M12 20h9"/>
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+              </svg>
+            </button>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

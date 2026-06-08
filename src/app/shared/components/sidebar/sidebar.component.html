@@ -1,0 +1,49 @@
+<nav class="sidebar">
+
+  <!-- Logo -->
+  <div class="sidebar-logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="#0d1117">
+        <path d="M7 4h10l2 6H5L7 4zm0 0L5 10H3l1 8h16l1-8h-2L17 4H7zM9 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm8 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+      </svg>
+    </div>
+    <div>
+      <div class="logo-text">Garage CRM</div>
+      <div class="logo-badge">PRO</div>
+    </div>
+  </div>
+
+  <!-- Nav groups -->
+  <div class="sidebar-section" *ngFor="let group of navGroups">
+    <div class="sidebar-label">{{ group.label }}</div>
+
+    <a
+      class="nav-item"
+      [routerLink]="item.route"
+      routerLinkActive="active"
+      *ngFor="let item of group.items"
+    >
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"
+           [innerHTML]="item.svgContent">
+      </svg>
+      {{ item.label }}
+      <span
+        *ngIf="item.badge"
+        class="nav-badge"
+        [class.red]="item.badgeClass === 'red'"
+      >{{ item.badge }}</span>
+    </a>
+  </div>
+
+  <!-- Footer -->
+  <div class="sidebar-footer">
+    <div class="user-card">
+      <div class="user-avatar">AB</div>
+      <div>
+        <div class="user-name">Auto Belhaj</div>
+        <div class="user-role">Administrateur</div>
+      </div>
+    </div>
+  </div>
+
+</nav>

@@ -1,0 +1,17 @@
+<div class="section-header" style="margin-bottom:16px;">
+  <div class="section-title" style="font-size:16px;">Planning Mécaniciens</div>
+  <button class="btn btn-ghost">Cette semaine ▾</button>
+</div>
+
+<div class="planning-grid">
+  <div class="plan-header plan-cell"></div>
+  <div class="plan-header plan-cell" *ngFor="let day of days">{{ day }}</div>
+
+  <ng-container *ngFor="let m of mechanics">
+    <div class="plan-cell plan-mechanic">
+      <div class="avatar av-amber" style="font-size:10px">{{ m.substring(0,2) }}</div>
+      {{ m }}
+    </div>
+    <div class="plan-cell" *ngFor="let day of days"></div>
+  </ng-container>
+</div>

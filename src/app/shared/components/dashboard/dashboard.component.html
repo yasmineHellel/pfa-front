@@ -1,0 +1,122 @@
+<!-- Stats -->
+<div class="stats-grid">
+  <app-stat-card
+    *ngFor="let s of stats"
+    [label]="s.label"
+    [value]="s.value"
+    [delta]="s.delta"
+    [deltaType]="s.deltaType"
+    [color]="s.color"
+  ></app-stat-card>
+</div>
+
+<!-- Two column layout -->
+<div class="two-col">
+
+  <!-- Left: Recent repairs -->
+  <div>
+    <div class="section-header">
+      <div class="section-title">Réparations récentes</div>
+      <div class="section-actions">
+        <button class="btn btn-ghost" routerLink="/repairs" style="padding:5px 10px;font-size:12px;">Voir tout</button>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <app-search-bar placeholder="🔍  Rechercher une réparation…" [showFilter]="true"></app-search-bar>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Client</th>
+            <th>Véhicule</th>
+            <th>Panne</th>
+            <th>Mécanicien</th>
+            <th>Statut</th>
+            <th>Coût</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of repairs">
+            <td>
+              <div class="td-with-avatar">
+                <div class="avatar" [ngClass]="'av-' + avatarColor(r.clientId)">{{ initials(r.clientName) }}</div>
+                <div>
+                  <div>{{ r.clientName }}</div>
+                  <div class="td-muted">{{ r.clientPhone }}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div>{{ r.vehicleName }}</div>
+              <div class="td-muted">{{ r.plate }}</div>
+            </td>
+            <td>{{ r.description }}</td>
+            <td>{{ r.mechanicName }}</td>
+            <td>
+              <span class="badge" [ngClass]="getStatusBadgeClass(r.status)">
+                {{ getStatusLabel(r.status) }}
+              </span>
+            </td>
+            <td>{{ r.cost | number }} TND</td>
+            <td>
+              <div class="action-group">
+                <button class="action-btn" title="Voir">
+                  <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
+                <button class="action-btn" title="Éditer">
+                  <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Right column -->
+  <div style="display:flex;flex-direction:column;gap:14px;">
+
+    <!-- Activity feed -->
+    <div class="card">
+      <div class="card-title">Activité récente</div>
+      <div class="activity-list">
+        <div class="activity-item" *ngFor="let a of activities">
+          <div class="act-dot" [style.background]="a.dotColor"></div>
+          <div class="act-content">
+            <div class="act-text" [innerHTML]="a.text"></div>
+            <div class="act-time">{{ a.time }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Critical stock -->
+    <div class="card">
+      <div class="card-title">
+        Stock critique
+        <span class="badge badge-red">{{ criticalStock.length }} alertes</span>
+      </div>
+      <div *ngFor="let item of criticalStock" class="stock-row">
+        <div class="stock-name">{{ item.name }}</div>
+        <div class="stock-qty" [style.color]="getStockQtyColor(item)">{{ item.quantity }}</div>
+        <div class="stock-bar-wrap">
+          <div class="progress-bar">
+            <div class="progress-fill"
+              [style.width]="getStockBarWidth(item)"
+              [style.background]="getStockBarColor(item)">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
