@@ -5,7 +5,8 @@ import { RepairService }  from '../../../core/services/repair.service';
 import { ClientService }  from '../../../core/services/client.service';
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { AuthService }    from '../../../core/services/auth.service';
-import { Repair, Client, Vehicle, InvoiceLine, RepairInvoice } from '../../../core/models/models';
+import { StockService }   from '../../../core/services/stock.service';
+import { Repair, Client, Vehicle, InvoiceLine, RepairInvoice, RepairPart, StockItem } from '../../../core/models/models';
 
 type ClientMode  = 'existing' | 'new';
 type VehicleMode = 'existing' | 'new';
@@ -79,6 +80,7 @@ export class RepairsComponent implements OnInit {
     private repairService:  RepairService,
     private clientService:  ClientService,
     private vehicleService: VehicleService,
+    private stockService:   StockService,
     public  authService:    AuthService
   ) {}
 
@@ -344,6 +346,88 @@ export class RepairsComponent implements OnInit {
     return true;
   }
 
+  // ── Pièces de réparation ───────────────────────────────────────
+  showPartsModal  = false;
+  partsRepair:    Repair | null = null;
+  stockItems:     StockItem[] = [];
+  stockLoading    = false;
+  itemQtyMap:     Record<number, number> = {};
+  addingPartId:   number | null = null;
+  removingPartId: number | null = null;
+
+  openParts(r: Repair): void {
+    this.partsRepair   = r;
+    this.addingPartId  = null;
+    this.showPartsModal = true;
+    this.stockItems    = [];
+    this.itemQtyMap    = {};
+    this.loadMechStock();
+  }
+
+  closeParts(): void { this.showPartsModal = false; this.partsRepair = null; }
+
+  private loadMechStock(): void {
+    const u  = this.authService.getCurrentUser()!;
+    const me = `${u.firstName} ${u.lastName}`;
+    this.stockLoading = true;
+    this.stockService.getAll().subscribe({
+      next: data => {
+        this.stockItems = data.filter(s => s.mechanicName === me && s.quantity > 0);
+        this.stockItems.forEach(s => { if (!this.itemQtyMap[s.id]) this.itemQtyMap[s.id] = 1; });
+        this.stockLoading = false;
+      },
+      error: () => { this.stockLoading = false; }
+    });
+  }
+
+  isPartUsed(stockItemId: number): boolean {
+    return !!this.partsRepair?.usedParts?.some(p => p.stockItemId === stockItemId);
+  }
+
+  addPartToRepair(item: StockItem): void {
+    const qty = this.itemQtyMap[item.id] ?? 1;
+    if (qty < 1 || qty > item.quantity) return;
+    this.addingPartId = item.id;
+    this.repairService.addPart(this.partsRepair!.id, item.id, qty).subscribe({
+      next: updated => {
+        this.partsRepair = this.syncRepair(updated);
+        // Decrement local stock copy
+        const idx = this.stockItems.findIndex(s => s.id === item.id);
+        if (idx !== -1) {
+          this.stockItems[idx] = { ...this.stockItems[idx], quantity: this.stockItems[idx].quantity - qty };
+          if (this.stockItems[idx].quantity <= 0) this.stockItems.splice(idx, 1);
+          else this.itemQtyMap[item.id] = 1;
+        }
+        this.addingPartId = null;
+      },
+      error: () => { this.addingPartId = null; }
+    });
+  }
+
+  removePartFromRepair(p: RepairPart): void {
+    this.removingPartId = p.stockItemId;
+    this.repairService.removePart(this.partsRepair!.id, p.stockItemId).subscribe({
+      next: updated => {
+        this.partsRepair  = this.syncRepair(updated);
+        this.removingPartId = null;
+        // Refresh stock list
+        this.stockItems = [];
+        this.itemQtyMap = {};
+        this.loadMechStock();
+      },
+      error: () => { this.removingPartId = null; }
+    });
+  }
+
+  private syncRepair(updated: Repair): Repair {
+    const fresh: Repair = { ...updated, usedParts: [...(updated.usedParts ?? [])] };
+    const idx = this.repairs.findIndex(r => r.id === fresh.id);
+    if (idx !== -1) this.repairs[idx] = fresh;
+    if (this.selectedRepair?.id === fresh.id) this.selectedRepair = fresh;
+    this.applyFilter();
+    return fresh;
+  }
+
   // ── Facture ────────────────────────────────────────────────────
   showInvoiceModal  = false;
   invoiceRepair:    Repair | null = null;
@@ -360,8 +444,10 @@ export class RepairsComponent implements OnInit {
   get invoiceTotal(): number { return this.invoiceTotalParts + this.laborCost; }
 
   openInvoice(r: Repair): void {
-    this.invoiceRepair    = r;
-    this.invoiceLines     = [{ description: '', quantity: 1, unitPrice: 0 }];
+    this.invoiceRepair = r;
+    this.invoiceLines  = r.usedParts && r.usedParts.length
+      ? r.usedParts.map(p => ({ description: p.name, quantity: p.quantity, unitPrice: p.unitPrice }))
+      : [{ description: '', quantity: 1, unitPrice: 0 }];
     this.laborDescription = 'Main d\'œuvre';
     this.laborCost        = 0;
     this.invoiceError     = '';

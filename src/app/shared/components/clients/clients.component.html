@@ -1,6 +1,6 @@
 <div class="section-header" style="margin-bottom:16px;">
   <div class="section-title" style="font-size:16px;">Gestion Clients</div>
-  <button class="btn btn-primary">+ Nouveau client</button>
+  <button class="btn btn-primary" (click)="openCreate()">+ Nouveau client</button>
 </div>
 
 <div *ngIf="loading" class="text-center py-4" style="color:var(--text-3)">Chargement…</div>
@@ -46,18 +46,18 @@
         <td class="td-muted">{{ c.lastVisit }}</td>
         <td>
           <div class="action-group">
-            <button class="action-btn" title="Voir">
+            <button class="action-btn" title="Voir" (click)="openDetail(c)">
               <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
               </svg>
             </button>
-            <button class="action-btn" title="Éditer">
+            <button class="action-btn" title="Éditer" (click)="openEdit(c)">
               <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
               </svg>
             </button>
-            <button class="action-btn danger" title="Supprimer">
+            <button class="action-btn danger" title="Supprimer" (click)="confirmDelete(c.id)">
               <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <polyline points="3 6 5 6 21 6"/>
                 <path d="M19 6l-1 14H6L5 6"/>
@@ -68,6 +68,145 @@
           </div>
         </td>
       </tr>
+      <tr *ngIf="filtered.length === 0">
+        <td colspan="8" style="text-align:center;color:var(--text-3);padding:32px">Aucun client trouvé.</td>
+      </tr>
     </tbody>
   </table>
+</div>
+
+<!-- ── Modal create/edit ─────────────────────────────────────────────────── -->
+<div class="modal-backdrop" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title">{{ modalMode === 'create' ? 'Nouveau client' : 'Modifier client' }}</div>
+      <button class="modal-close" (click)="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" [formGroup]="form">
+      <div class="form-row-2">
+        <div class="form-group">
+          <label class="form-label">Prénom *</label>
+          <input class="form-control" formControlName="firstName" placeholder="Prénom">
+          <div class="form-error" *ngIf="f('firstName').touched && f('firstName').invalid">Champ requis</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nom *</label>
+          <input class="form-control" formControlName="lastName" placeholder="Nom">
+          <div class="form-error" *ngIf="f('lastName').touched && f('lastName').invalid">Champ requis</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Téléphone *</label>
+        <input class="form-control" formControlName="phone" placeholder="+216 XX XXX XXX">
+        <div class="form-error" *ngIf="f('phone').touched && f('phone').invalid">Champ requis</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email *</label>
+        <input class="form-control" formControlName="email" placeholder="email@exemple.com" type="email">
+        <div class="form-error" *ngIf="f('email').touched && f('email').invalid">Email invalide</div>
+      </div>
+      <div class="form-error" *ngIf="formError">{{ formError }}</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeModal()">Annuler</button>
+      <button class="btn btn-primary" (click)="submit()" [disabled]="submitting">
+        {{ submitting ? 'Enregistrement…' : (modalMode === 'create' ? 'Créer' : 'Enregistrer') }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Confirmation suppression ──────────────────────────────────────────── -->
+<div class="modal-backdrop" *ngIf="confirmDeleteId != null" (click)="cancelDelete()">
+  <div class="confirm-box" (click)="$event.stopPropagation()">
+    <div class="confirm-icon">
+      <svg width="28" height="28" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24">
+        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+        <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+      </svg>
+    </div>
+    <div class="confirm-title">Supprimer ce client ?</div>
+    <div class="confirm-sub">Cette action est irréversible.</div>
+    <div class="confirm-actions">
+      <button class="btn btn-secondary" (click)="cancelDelete()">Annuler</button>
+      <button class="btn btn-danger" (click)="doDelete()">Supprimer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Detail drawer ─────────────────────────────────────────────────────── -->
+<div class="drawer-overlay" *ngIf="selectedClient" (click)="closeDetail()"></div>
+<div class="detail-drawer" [class.open]="selectedClient != null">
+  <ng-container *ngIf="selectedClient">
+    <div class="drawer-header">
+      <div class="drawer-avatar" [ngClass]="'av-' + avatarColor(selectedClient)">
+        {{ initials(selectedClient) }}
+      </div>
+      <div>
+        <div class="drawer-name">{{ selectedClient.firstName }} {{ selectedClient.lastName }}</div>
+        <div class="drawer-sub">Client #{{ selectedClient.id }}</div>
+      </div>
+      <button class="drawer-close" (click)="closeDetail()">✕</button>
+    </div>
+
+    <div class="drawer-body">
+      <!-- Contact -->
+      <div class="detail-block">
+        <div class="block-label">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+          </svg>
+          Informations
+        </div>
+        <div class="info-grid">
+          <div class="info-item"><span class="info-label">Téléphone</span><span class="info-val">{{ selectedClient.phone }}</span></div>
+          <div class="info-item"><span class="info-label">Email</span><span class="info-val">{{ selectedClient.email }}</span></div>
+          <div class="info-item"><span class="info-label">Total dépensé</span><span class="info-val accent">{{ selectedClient.totalSpent | number }} TND</span></div>
+          <div class="info-item"><span class="info-label">Dernière visite</span><span class="info-val">{{ selectedClient.lastVisit }}</span></div>
+        </div>
+      </div>
+
+      <!-- Véhicules -->
+      <div class="detail-block">
+        <div class="block-label">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
+            <path d="M5 17H3V13L5 7h9l3 4h3l1 3v3h-2M5 17h10M9 7v4"/>
+          </svg>
+          Véhicules ({{ clientVehicles.length }})
+        </div>
+        <div *ngIf="clientVehicles.length === 0" class="drawer-empty">Aucun véhicule enregistré.</div>
+        <div class="vehicle-list" *ngIf="clientVehicles.length > 0">
+          <div class="vehicle-item" *ngFor="let v of clientVehicles">
+            <div class="vehicle-plate">{{ v.plate }}</div>
+            <div class="vehicle-info">{{ v.brand }} {{ v.model }} · {{ v.year }} · {{ v.mileage | number }} km</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Réparations -->
+      <div class="detail-block">
+        <div class="block-label">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+          </svg>
+          Réparations ({{ clientRepairs.length }})
+        </div>
+        <div *ngIf="drawerLoading" style="color:var(--text-3);font-size:13px">Chargement…</div>
+        <div *ngIf="!drawerLoading && clientRepairs.length === 0" class="drawer-empty">Aucune réparation.</div>
+        <div class="repair-drawer-list" *ngIf="clientRepairs.length > 0">
+          <div class="repair-drawer-item" *ngFor="let r of clientRepairs">
+            <div class="repair-drawer-left">
+              <span class="repair-drawer-desc">{{ r.description }}</span>
+              <span class="repair-drawer-plate">{{ r.plate }} · {{ r.entryDate }}</span>
+            </div>
+            <div class="repair-drawer-right">
+              <span class="badge" [ngClass]="repairStatusBadge(r.status)">{{ repairStatusLabel(r.status) }}</span>
+              <span class="repair-drawer-cost">{{ r.cost | number }} TND</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
 </div>

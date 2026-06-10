@@ -29,4 +29,8 @@ export class QuoteService {
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
+
+  convert(id: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${id}/convert`, {});
+  }
 }

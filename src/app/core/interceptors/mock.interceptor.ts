@@ -64,7 +64,11 @@ const SUPPLIER_CATALOGS: Record<number, SupplierPiece[]> = {
 };
 
 let REPAIR_INVOICES: RepairInvoice[] = [];
-let invoiceCounter = 1;
+let invoiceCounter  = 1;
+let clientIdCounter  = 5;
+let vehicleIdCounter = 4;
+let quoteIdCounter   = 21;
+let invoiceIdCounter = 41;
 
 let ORDERS: Order[] = [
   {
@@ -183,13 +187,98 @@ export class MockInterceptor implements HttpInterceptor {
     if (url.includes('/dashboard/stats'))    return this.respond(STATS);
     if (url.includes('/dashboard/activity')) return this.respond(ACTIVITY);
     if (url.includes('/stock/low-stock'))    return this.respond(STOCK.filter(s => s.status !== 'ok'));
+    // ── Clients CRUD ────────────────────────────────────────────────────────
+    if (url.match(/\/clients\/\d+$/) && method === 'DELETE') {
+      const id = parseInt(url.split('/clients/')[1]);
+      const i  = CLIENTS.findIndex(c => c.id === id);
+      if (i !== -1) CLIENTS.splice(i, 1);
+      return this.respond(null);
+    }
+    if (url.match(/\/clients\/\d+$/) && method === 'PUT') {
+      const id  = parseInt(url.split('/clients/')[1]);
+      const idx = CLIENTS.findIndex(c => c.id === id);
+      if (idx !== -1) CLIENTS[idx] = { ...CLIENTS[idx], ...req.body as any };
+      return this.respond(CLIENTS[idx !== -1 ? idx : 0]);
+    }
+    if (url.includes('/clients') && method === 'POST') {
+      const body = req.body as any;
+      const created: Client = { ...body, id: ++clientIdCounter, vehicleCount: 0, repairCount: 0, totalSpent: 0, lastVisit: 'Nouveau' };
+      CLIENTS.push(created);
+      return this.respond(created);
+    }
     if (url.includes('/clients'))            return this.respond(CLIENTS);
-    if (url.includes('/vehicles'))           return this.respond(VEHICLES);
+
+    // ── Vehicles CRUD ────────────────────────────────────────────────────────
+    if (url.match(/\/vehicles\/\d+$/) && method === 'DELETE') {
+      const id = parseInt(url.split('/vehicles/')[1]);
+      const i  = VEHICLES.findIndex(v => v.id === id);
+      if (i !== -1) VEHICLES.splice(i, 1);
+      return this.respond(null);
+    }
+    if (url.match(/\/vehicles\/\d+$/) && method === 'PUT') {
+      const id   = parseInt(url.split('/vehicles/')[1]);
+      const idx  = VEHICLES.findIndex(v => v.id === id);
+      const body = req.body as any;
+      if (body.clientId) {
+        const cl = CLIENTS.find(c => c.id === parseInt(body.clientId));
+        if (cl) body.clientName = `${cl.firstName} ${cl.lastName}`;
+      }
+      if (idx !== -1) VEHICLES[idx] = { ...VEHICLES[idx], ...body };
+      return this.respond(VEHICLES[idx !== -1 ? idx : 0]);
+    }
+    if (url.includes('/vehicles') && method === 'POST') {
+      const body = req.body as any;
+      const cl   = CLIENTS.find(c => c.id === parseInt(body.clientId));
+      const created: Vehicle = { ...body, id: ++vehicleIdCounter, clientName: cl ? `${cl.firstName} ${cl.lastName}` : '', repairCount: 0, mileage: parseInt(body.mileage) || 0, year: parseInt(body.year) || new Date().getFullYear() };
+      VEHICLES.push(created);
+      if (cl) cl.vehicleCount++;
+      return this.respond(created);
+    }
+    if (url.includes('/vehicles')) {
+      const params   = new URL(url, 'http://x').searchParams;
+      const clientId = parseInt(params.get('clientId') || '0');
+      return this.respond(clientId ? VEHICLES.filter(v => v.clientId === clientId) : VEHICLES);
+    }
     if (url.includes('/repairs') && method === 'POST') {
       const body    = req.body as any;
       const created = { ...body, id: Math.floor(Math.random() * 900) + 100 };
       REPAIRS.unshift(created);
       return this.respond(created);
+    }
+    if (url.match(/\/repairs\/\d+\/parts\/\d+$/) && method === 'DELETE') {
+      const segs       = url.split('/');
+      const stockItemId = parseInt(segs[segs.length - 1]);
+      const repairId    = parseInt(url.split('/repairs/')[1].split('/parts')[0]);
+      const repair = REPAIRS.find(r => r.id === repairId);
+      if (!repair) return this.error(404, 'Réparation non trouvée.');
+      const partIdx = (repair as any).usedParts?.findIndex((p: any) => p.stockItemId === stockItemId) ?? -1;
+      if (partIdx !== -1) {
+        const qty = (repair as any).usedParts[partIdx].quantity;
+        const stock = STOCK.find(s => s.id === stockItemId);
+        if (stock) {
+          stock.quantity += qty;
+          stock.status = stock.quantity <= 0 ? 'critique' : stock.quantity <= stock.alertThreshold ? 'bas' : 'ok';
+        }
+        (repair as any).usedParts.splice(partIdx, 1);
+      }
+      (repair as any).cost = this.calcPartsCost(repair);
+      return this.respond(repair);
+    }
+    if (url.match(/\/repairs\/\d+\/parts$/) && method === 'POST') {
+      const repairId    = parseInt(url.split('/repairs/')[1].split('/parts')[0]);
+      const { stockItemId, quantity } = req.body as any;
+      const repair = REPAIRS.find(r => r.id === repairId);
+      const stock  = STOCK.find(s => s.id === stockItemId);
+      if (!repair || !stock) return this.error(404, 'Réparation ou pièce non trouvée.');
+      if (!(repair as any).usedParts) (repair as any).usedParts = [];
+      const existing = (repair as any).usedParts.find((p: any) => p.stockItemId === stockItemId);
+      const qty = parseInt(quantity);
+      if (existing) { existing.quantity += qty; }
+      else { (repair as any).usedParts.push({ stockItemId, name: stock.name, ref: stock.ref, quantity: qty, unitPrice: stock.unitPrice }); }
+      stock.quantity -= qty;
+      stock.status = stock.quantity <= 0 ? 'critique' : stock.quantity <= stock.alertThreshold ? 'bas' : 'ok';
+      (repair as any).cost = this.calcPartsCost(repair);
+      return this.respond(repair);
     }
     if (url.match(/\/repairs\/\d+$/) && method === 'PUT') {
       const id  = parseInt(url.split('/repairs/')[1]);
@@ -203,7 +292,21 @@ export class MockInterceptor implements HttpInterceptor {
       if (i !== -1) REPAIRS.splice(i, 1);
       return this.respond(null);
     }
-    if (url.includes('/repairs'))            return this.respond(REPAIRS);
+    if (url.includes('/repairs')) {
+      const params   = new URL(url, 'http://x').searchParams;
+      const clientId = parseInt(params.get('clientId') || '0');
+      return this.respond(clientId ? REPAIRS.filter(r => r.clientId === clientId) : REPAIRS);
+    }
+    // ── Invoices ──────────────────────────────────────────────────────────────
+    if (url.match(/\/invoices\/\d+\/pay$/) && method === 'PUT') {
+      const id  = parseInt(url.split('/invoices/')[1].split('/pay')[0]);
+      const idx = INVOICES.findIndex(i => i.id === id);
+      if (idx !== -1) {
+        const m = (req.body as any)?.paymentMethod || 'Cash';
+        INVOICES[idx] = { ...INVOICES[idx], paid: INVOICES[idx].amount, remaining: 0, status: 'payee', paymentMethod: m };
+      }
+      return this.respond(INVOICES[idx !== -1 ? idx : 0]);
+    }
     if (url.includes('/invoices'))           return this.respond(INVOICES);
     // ── Stock catalog ────────────────────────────────────────────────────────
     if (url.match(/\/stock\/catalog\/\d+$/) && method === 'GET') {
@@ -269,9 +372,41 @@ export class MockInterceptor implements HttpInterceptor {
       REPAIR_INVOICES.push(inv);
       return this.respond(inv);
     }
+    // ── Quotes CRUD ──────────────────────────────────────────────────────────
+    if (url.match(/\/quotes\/\d+\/convert$/) && method === 'POST') {
+      const id    = parseInt(url.split('/quotes/')[1].split('/convert')[0]);
+      const quote = QUOTES.find(q => q.id === id);
+      if (!quote) return this.error(404, 'Devis non trouvé.');
+      const inv: Invoice = { id: ++invoiceIdCounter, clientId: quote.clientId, clientName: quote.clientName, date: new Date().toLocaleDateString('fr-FR'), amount: quote.total, paid: 0, remaining: quote.total, status: 'impayee', paymentMethod: '-' };
+      INVOICES.unshift(inv);
+      quote.status = 'accepte';
+      return this.respond(inv);
+    }
+    if (url.match(/\/quotes\/\d+$/) && method === 'DELETE') {
+      const id = parseInt(url.split('/quotes/')[1]);
+      const i  = QUOTES.findIndex(q => q.id === id);
+      if (i !== -1) QUOTES.splice(i, 1);
+      return this.respond(null);
+    }
+    if (url.match(/\/quotes\/\d+$/) && method === 'PUT') {
+      const id  = parseInt(url.split('/quotes/')[1]);
+      const idx = QUOTES.findIndex(q => q.id === id);
+      if (idx !== -1) QUOTES[idx] = { ...QUOTES[idx], ...req.body as any };
+      return this.respond(QUOTES[idx !== -1 ? idx : 0]);
+    }
+    if (url.includes('/quotes') && method === 'POST') {
+      const body    = req.body as any;
+      const created: Quote = { ...body, id: ++quoteIdCounter, status: 'en-attente' };
+      QUOTES.unshift(created);
+      return this.respond(created);
+    }
     if (url.includes('/quotes'))             return this.respond(QUOTES);
 
     return next.handle(req);
+  }
+
+  private calcPartsCost(repair: any): number {
+    return (repair.usedParts ?? []).reduce((s: number, p: any) => s + p.quantity * p.unitPrice, 0);
   }
 
   private toPublic(u: any) {

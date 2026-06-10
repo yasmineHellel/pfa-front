@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Repair, RepairInvoice } from '../models/models';
+import { Repair, RepairInvoice, RepairPart } from '../models/models';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -40,5 +40,13 @@ export class RepairService {
 
   createInvoice(invoice: Omit<RepairInvoice, 'id' | 'invoiceNumber'>): Observable<RepairInvoice> {
     return this.http.post<RepairInvoice>(`${environment.apiUrl}/repair-invoices`, invoice);
+  }
+
+  addPart(repairId: number, stockItemId: number, quantity: number): Observable<Repair> {
+    return this.http.post<Repair>(`${this.apiUrl}/${repairId}/parts`, { stockItemId, quantity });
+  }
+
+  removePart(repairId: number, stockItemId: number): Observable<Repair> {
+    return this.http.delete<Repair>(`${this.apiUrl}/${repairId}/parts/${stockItemId}`);
   }
 }

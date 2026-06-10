@@ -1,6 +1,6 @@
 <div class="section-header" style="margin-bottom:16px;">
   <div class="section-title" style="font-size:16px;">Véhicules</div>
-  <button class="btn btn-primary">+ Nouveau véhicule</button>
+  <button class="btn btn-primary" (click)="openCreate()">+ Nouveau véhicule</button>
 </div>
 
 <div *ngIf="loading" class="text-center py-4" style="color:var(--text-3)">Chargement…</div>
@@ -29,9 +29,7 @@
     <tbody>
       <tr *ngFor="let v of filtered">
         <td style="font-weight:700;color:var(--accent)">{{ v.plate }}</td>
-        <td>
-          <div style="font-weight:500">{{ v.brand }} {{ v.model }}</div>
-        </td>
+        <td><div style="font-weight:500">{{ v.brand }} {{ v.model }}</div></td>
         <td class="td-muted">{{ v.engine }}</td>
         <td>{{ v.year }}</td>
         <td>{{ v.clientName }}</td>
@@ -39,18 +37,13 @@
         <td>{{ v.repairCount }}</td>
         <td>
           <div class="action-group">
-            <button class="action-btn" title="Voir">
-              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-              </svg>
-            </button>
-            <button class="action-btn" title="Éditer">
+            <button class="action-btn" title="Éditer" (click)="openEdit(v)">
               <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
               </svg>
             </button>
-            <button class="action-btn danger" title="Supprimer">
+            <button class="action-btn danger" title="Supprimer" (click)="confirmDelete(v.id)">
               <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <polyline points="3 6 5 6 21 6"/>
                 <path d="M19 6l-1 14H6L5 6"/>
@@ -61,6 +54,86 @@
           </div>
         </td>
       </tr>
+      <tr *ngIf="filtered.length === 0">
+        <td colspan="8" style="text-align:center;color:var(--text-3);padding:32px">Aucun véhicule trouvé.</td>
+      </tr>
     </tbody>
   </table>
+</div>
+
+<!-- ── Modal create/edit ─────────────────────────────────────────────────── -->
+<div class="modal-backdrop" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title">{{ modalMode === 'create' ? 'Nouveau véhicule' : 'Modifier véhicule' }}</div>
+      <button class="modal-close" (click)="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" [formGroup]="form">
+      <div class="form-group">
+        <label class="form-label">Propriétaire *</label>
+        <select class="form-control" formControlName="clientId">
+          <option value="">-- Sélectionner un client --</option>
+          <option *ngFor="let c of clients" [value]="c.id">{{ c.firstName }} {{ c.lastName }}</option>
+        </select>
+        <div class="form-error" *ngIf="f('clientId').touched && f('clientId').invalid">Champ requis</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Immatriculation *</label>
+        <input class="form-control" formControlName="plate" placeholder="TU 1234 2023">
+        <div class="form-error" *ngIf="f('plate').touched && f('plate').invalid">Champ requis</div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-group">
+          <label class="form-label">Marque *</label>
+          <input class="form-control" formControlName="brand" placeholder="Peugeot">
+          <div class="form-error" *ngIf="f('brand').touched && f('brand').invalid">Champ requis</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Modèle *</label>
+          <input class="form-control" formControlName="model" placeholder="308">
+          <div class="form-error" *ngIf="f('model').touched && f('model').invalid">Champ requis</div>
+        </div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-group">
+          <label class="form-label">Année *</label>
+          <input class="form-control" formControlName="year" type="number" placeholder="2022">
+          <div class="form-error" *ngIf="f('year').touched && f('year').invalid">Champ requis</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kilométrage</label>
+          <input class="form-control" formControlName="mileage" type="number" placeholder="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Motorisation</label>
+        <input class="form-control" formControlName="engine" placeholder="1.5 TDI Diesel">
+      </div>
+      <div class="form-error" *ngIf="formError">{{ formError }}</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeModal()">Annuler</button>
+      <button class="btn btn-primary" (click)="submit()" [disabled]="submitting">
+        {{ submitting ? 'Enregistrement…' : (modalMode === 'create' ? 'Créer' : 'Enregistrer') }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Confirmation suppression ──────────────────────────────────────────── -->
+<div class="modal-backdrop" *ngIf="confirmDeleteId != null" (click)="cancelDelete()">
+  <div class="confirm-box" (click)="$event.stopPropagation()">
+    <div class="confirm-icon">
+      <svg width="28" height="28" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24">
+        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+        <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+      </svg>
+    </div>
+    <div class="confirm-title">Supprimer ce véhicule ?</div>
+    <div class="confirm-sub">Cette action est irréversible.</div>
+    <div class="confirm-actions">
+      <button class="btn btn-secondary" (click)="cancelDelete()">Annuler</button>
+      <button class="btn btn-danger" (click)="doDelete()">Supprimer</button>
+    </div>
+  </div>
 </div>

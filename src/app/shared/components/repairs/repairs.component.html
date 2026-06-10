@@ -57,7 +57,19 @@
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
               </svg>
             </button>
-            <button class="action-btn invoice" title="Générer une facture" (click)="openInvoice(r)">
+            <button class="action-btn parts" title="Pièces de rechange"
+                    [disabled]="r.status !== 'en-cours'"
+                    [class.disabled]="r.status !== 'en-cours'"
+                    (click)="r.status === 'en-cours' && openParts(r)">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+              </svg>
+              <span class="parts-count" *ngIf="r.usedParts && r.usedParts.length > 0">{{ r.usedParts.length }}</span>
+            </button>
+            <button class="action-btn invoice" title="Générer une facture"
+                    [disabled]="r.status !== 'termine'"
+                    [class.disabled]="r.status !== 'termine'"
+                    (click)="r.status === 'termine' && openInvoice(r)">
               <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                 <polyline points="14 2 14 8 20 8"/>
@@ -226,6 +238,32 @@
       <p class="description-text">{{ selectedRepair.description }}</p>
     </div>
 
+    <!-- Pièces utilisées -->
+    <div class="detail-block" *ngIf="selectedRepair.usedParts && selectedRepair.usedParts.length > 0">
+      <div class="block-label">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+        </svg>
+        Pièces de rechange utilisées
+      </div>
+      <div class="parts-drawer-list">
+        <div class="parts-drawer-item" *ngFor="let p of selectedRepair.usedParts">
+          <div class="parts-drawer-left">
+            <span class="parts-drawer-name">{{ p.name }}</span>
+            <span class="parts-drawer-ref">{{ p.ref }}</span>
+          </div>
+          <div class="parts-drawer-right">
+            <span class="parts-drawer-qty">× {{ p.quantity }}</span>
+            <span class="parts-drawer-total">{{ (p.quantity * p.unitPrice) | number }} TND</span>
+          </div>
+        </div>
+        <div class="parts-drawer-sum">
+          <span>Total pièces</span>
+          <span>{{ selectedRepair.cost | number }} TND</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Récap financier -->
     <div class="detail-block">
       <div class="block-label">
@@ -240,7 +278,7 @@
           <div class="recap-value">{{ selectedRepair.entryDate }}</div>
         </div>
         <div class="recap-item">
-          <div class="recap-label">Coût total</div>
+          <div class="recap-label">Coût pièces</div>
           <div class="recap-value accent">{{ selectedRepair.cost | number }} TND</div>
         </div>
         <div class="recap-item">
@@ -473,6 +511,115 @@
       </div>
 
     </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODAL — Pièces de réparation
+════════════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" *ngIf="showPartsModal" (click)="closeParts()">
+  <div class="modal-box parts-box" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <div class="modal-icon parts-icon">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+          </svg>
+        </div>
+        <div>
+          <h2 class="modal-title">Pièces de réparation</h2>
+          <p class="modal-sub">{{ partsRepair?.vehicleName }} — {{ partsRepair?.clientName }}</p>
+        </div>
+      </div>
+      <button class="modal-close" (click)="closeParts()">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Pièces déjà ajoutées -->
+    <div class="form-section">
+      <div class="section-label">Pièces utilisées dans cette réparation</div>
+
+      <div class="parts-empty" *ngIf="!partsRepair?.usedParts || partsRepair!.usedParts!.length === 0">
+        <svg width="28" height="28" fill="none" stroke="#d1d5db" stroke-width="1.5" viewBox="0 0 24 24">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+        </svg>
+        Aucune pièce ajoutée pour le moment
+      </div>
+
+      <div class="used-parts-list">
+        <div class="used-part-row" *ngFor="let p of partsRepair?.usedParts">
+          <div class="used-part-info">
+            <span class="used-part-name">{{ p.name }}</span>
+            <span class="used-part-ref">{{ p.ref }}</span>
+          </div>
+          <div class="used-part-right">
+            <span class="used-part-qty">× {{ p.quantity }}</span>
+            <span class="used-part-price">{{ (p.quantity * p.unitPrice) | number }} TND</span>
+            <button class="used-part-remove" (click)="removePartFromRepair(p)"
+                    [disabled]="removingPartId === p.stockItemId"
+                    title="Retirer">
+              <svg *ngIf="removingPartId !== p.stockItemId" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+              <span *ngIf="removingPartId === p.stockItemId" class="spinner-xs"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stock disponible -->
+    <div class="form-section">
+      <div class="section-label">Ajouter depuis votre stock</div>
+
+      <div class="loading-row" *ngIf="stockLoading">
+        <span class="spinner-amber"></span> Chargement du stock…
+      </div>
+
+      <div class="parts-empty" *ngIf="!stockLoading && stockItems.length === 0">
+        Votre stock est vide ou toutes les pièces ont été utilisées.
+      </div>
+
+      <div class="stock-parts-list" *ngIf="!stockLoading">
+        <div class="stock-part-row" *ngFor="let item of stockItems"
+             [class.already-used]="isPartUsed(item.id)">
+          <div class="stock-part-info">
+            <span class="stock-part-name">{{ item.name }}</span>
+            <div class="stock-part-meta">
+              <span class="badge badge-{{ item.categoryColor }}">{{ item.category }}</span>
+              <span class="stock-part-qty-info">{{ item.quantity }} en stock</span>
+              <span class="stock-part-price">{{ item.unitPrice | number }} TND / u.</span>
+            </div>
+          </div>
+          <div class="stock-part-action">
+            <ng-container *ngIf="!isPartUsed(item.id)">
+              <input type="number" class="inv-input inv-qty" style="width:60px"
+                     [(ngModel)]="itemQtyMap[item.id]" min="1" [max]="item.quantity">
+              <button class="btn-add-part" (click)="addPartToRepair(item)"
+                      [disabled]="addingPartId === item.id || itemQtyMap[item.id] < 1 || itemQtyMap[item.id] > item.quantity">
+                <span *ngIf="addingPartId !== item.id">+ Ajouter</span>
+                <span *ngIf="addingPartId === item.id" class="spinner-xs"></span>
+              </button>
+            </ng-container>
+            <span class="already-used-badge" *ngIf="isPartUsed(item.id)">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Ajoutée
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn-save" (click)="closeParts()">Enregistrer</button>
+    </div>
+
   </div>
 </div>
 

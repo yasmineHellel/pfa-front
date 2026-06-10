@@ -35,6 +35,14 @@ export interface Vehicle {
   repairCount: number;
 }
 
+export interface RepairPart {
+  stockItemId: number;
+  name: string;
+  ref: string;
+  quantity: number;
+  unitPrice: number;
+}
+
 export interface Repair {
   id: number;
   clientId: number;
@@ -48,6 +56,7 @@ export interface Repair {
   status: string;
   cost: number;
   entryDate: string;
+  usedParts?: RepairPart[];
 }
 
 export interface Invoice {

@@ -1,12 +1,13 @@
 <div class="section-header" style="margin-bottom:16px;">
   <div class="section-title" style="font-size:16px;">Devis</div>
-  <button class="btn btn-primary">+ Nouveau devis</button>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="convert-success" *ngIf="convertSuccess">✓ Converti en facture</div>
+    <button class="btn btn-primary" (click)="openCreate()">+ Nouveau devis</button>
+  </div>
 </div>
 
 <div class="tabs">
-  <button *ngFor="let tab of tabs; let i = index" class="tab" [class.active]="activeTab === i" (click)="setTab(i)">
-    {{ tab }}
-  </button>
+  <button *ngFor="let tab of tabs; let i = index" class="tab" [class.active]="activeTab === i" (click)="setTab(i)">{{ tab }}</button>
 </div>
 
 <div *ngIf="loading" class="text-center py-4" style="color:var(--text-3)">Chargement…</div>
@@ -33,25 +34,96 @@
         <td class="td-muted">{{ q.date }}</td>
         <td>{{ q.description }}</td>
         <td style="font-weight:600">{{ q.total | number }} TND</td>
-        <td>
-          <span class="badge" [ngClass]="statusBadge(q.status)">{{ statusLabel(q.status) }}</span>
-        </td>
+        <td><span class="badge" [ngClass]="statusBadge(q.status)">{{ statusLabel(q.status) }}</span></td>
         <td>
           <div class="action-group">
-            <button class="action-btn" title="Voir">
+            <button class="action-btn convert-btn" title="Convertir en facture"
+                    [disabled]="q.status === 'accepte' || convertingId === q.id"
+                    (click)="convertToInvoice(q)">
               <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
               </svg>
             </button>
-            <button class="action-btn" title="Éditer">
+            <button class="action-btn" title="Éditer" (click)="openEdit(q)">
               <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
               </svg>
             </button>
+            <button class="action-btn danger" title="Supprimer" (click)="confirmDelete(q.id)">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+                <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+              </svg>
+            </button>
           </div>
         </td>
       </tr>
+      <tr *ngIf="filtered.length === 0">
+        <td colspan="7" style="text-align:center;color:var(--text-3);padding:32px">Aucun devis trouvé.</td>
+      </tr>
     </tbody>
   </table>
+</div>
+
+<!-- ── Modal create/edit ─────────────────────────────────────────────────── -->
+<div class="modal-backdrop" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title">{{ modalMode === 'create' ? 'Nouveau devis' : 'Modifier devis' }}</div>
+      <button class="modal-close" (click)="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" [formGroup]="form">
+      <div class="form-row-2">
+        <div class="form-group">
+          <label class="form-label">Client *</label>
+          <select class="form-control" formControlName="clientId" (change)="onClientChange($any($event.target).value)">
+            <option value="">-- Sélectionner --</option>
+            <option *ngFor="let c of clients" [value]="c.id">{{ c.firstName }} {{ c.lastName }}</option>
+          </select>
+          <div class="form-error" *ngIf="f('clientId').touched && f('clientId').invalid">Champ requis</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date *</label>
+          <input class="form-control" formControlName="date" placeholder="JJ/MM/AAAA">
+          <div class="form-error" *ngIf="f('date').touched && f('date').invalid">Champ requis</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description *</label>
+        <textarea class="form-control" formControlName="description" rows="3" placeholder="Détail des prestations…"></textarea>
+        <div class="form-error" *ngIf="f('description').touched && f('description').invalid">Champ requis</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Montant total (TND) *</label>
+        <input class="form-control" formControlName="total" type="number" min="0" step="0.01" placeholder="0">
+        <div class="form-error" *ngIf="f('total').touched && f('total').invalid">Montant invalide</div>
+      </div>
+      <div class="form-error" *ngIf="formError">{{ formError }}</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeModal()">Annuler</button>
+      <button class="btn btn-primary" (click)="submit()" [disabled]="submitting">
+        {{ submitting ? 'Enregistrement…' : (modalMode === 'create' ? 'Créer' : 'Enregistrer') }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Confirmation suppression ──────────────────────────────────────────── -->
+<div class="modal-backdrop" *ngIf="confirmDeleteId != null" (click)="cancelDelete()">
+  <div class="confirm-box" (click)="$event.stopPropagation()">
+    <div class="confirm-icon">
+      <svg width="28" height="28" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24">
+        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+        <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+      </svg>
+    </div>
+    <div class="confirm-title">Supprimer ce devis ?</div>
+    <div class="confirm-sub">Cette action est irréversible.</div>
+    <div class="confirm-actions">
+      <button class="btn btn-secondary" (click)="cancelDelete()">Annuler</button>
+      <button class="btn btn-danger" (click)="doDelete()">Supprimer</button>
+    </div>
+  </div>
 </div>

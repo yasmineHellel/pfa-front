@@ -33,4 +33,8 @@ export class InvoiceService {
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
+
+  markAsPaid(id: number, paymentMethod: string): Observable<Invoice> {
+    return this.http.put<Invoice>(`${this.apiUrl}/${id}/pay`, { paymentMethod });
+  }
 }

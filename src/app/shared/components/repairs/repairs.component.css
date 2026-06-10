@@ -136,6 +136,49 @@
   margin: 0;
 }
 
+/* ── Parts drawer list ── */
+.parts-drawer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.parts-drawer-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 8px 12px;
+  border-left: 3px solid #7c3aed;
+}
+.parts-drawer-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.parts-drawer-name { font-size: 13px; font-weight: 600; color: #111827; }
+.parts-drawer-ref  { font-size: 11px; color: #9ca3af; }
+.parts-drawer-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.parts-drawer-qty   { font-size: 12px; color: #6b7280; }
+.parts-drawer-total { font-size: 13px; font-weight: 700; color: #7c3aed; }
+.parts-drawer-sum {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px 0;
+  margin-top: 2px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+}
+.parts-drawer-sum span:last-child { color: #d97706; }
+
 /* ── Recap grid ── */
 .recap-grid {
   display: grid;
@@ -452,10 +495,101 @@ textarea { resize: vertical; min-height: 80px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ════════════════════════════════════════════════════
+   PIÈCES — bouton wrench dans la table
+════════════════════════════════════════════════════ */
+.action-btn.parts { color: #7c3aed; position: relative; }
+.action-btn.parts:hover:not(:disabled) { background: rgba(124,58,237,.1); color: #6d28d9; }
+.action-btn.parts:disabled,
+.action-btn.parts.disabled { color: #d1d5db; cursor: not-allowed; background: transparent; }
+
+.parts-count {
+  position: absolute; top: -4px; right: -4px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #7c3aed; color: #fff;
+  font-size: 9px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
+
+/* ════════════════════════════════════════════════════
+   PIÈCES — modal
+════════════════════════════════════════════════════ */
+.parts-box  { max-width: 700px; }
+.parts-icon { background: rgba(124,58,237,.12); color: #7c3aed; }
+
+.parts-empty {
+  display: flex; align-items: center; gap: 10px;
+  padding: 18px 16px; background: #f9fafb;
+  border: 1px dashed #e5e7eb; border-radius: 10px;
+  font-size: 13.5px; color: #9ca3af;
+}
+
+/* Used parts list */
+.used-parts-list { display: flex; flex-direction: column; gap: 6px; }
+.used-part-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; background: #f9fafb; border: 1px solid #f3f4f6;
+  border-radius: 10px;
+}
+.used-part-info { display: flex; flex-direction: column; gap: 2px; }
+.used-part-name { font-size: 13.5px; font-weight: 600; color: #111827; }
+.used-part-ref  { font-size: 12px; color: #9ca3af; }
+.used-part-right { display: flex; align-items: center; gap: 10px; }
+.used-part-qty   { font-size: 13px; color: #6b7280; }
+.used-part-price { font-size: 13px; font-weight: 700; color: #d97706; min-width: 80px; text-align: right; }
+.used-part-remove {
+  width: 26px; height: 26px; border: none; border-radius: 6px;
+  background: rgba(239,68,68,.1); color: #ef4444; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.used-part-remove:disabled { opacity: .4; cursor: not-allowed; }
+.used-part-remove:hover:not(:disabled) { background: rgba(239,68,68,.2); }
+
+/* Stock parts list */
+.stock-parts-list { display: flex; flex-direction: column; gap: 6px; }
+.stock-part-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 14px; background: #fff; border: 1.5px solid #f3f4f6;
+  border-radius: 10px; transition: border-color .15s;
+}
+.stock-part-row:hover:not(.already-used) { border-color: #e5e7eb; }
+.stock-part-row.already-used { background: #f9fafb; opacity: .7; }
+.stock-part-info { flex: 1; min-width: 0; }
+.stock-part-name { font-size: 13.5px; font-weight: 600; color: #111827; display: block; margin-bottom: 4px; }
+.stock-part-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.stock-part-qty-info { font-size: 12px; color: #6b7280; }
+.stock-part-price    { font-size: 12px; font-weight: 600; color: #d97706; }
+
+.stock-part-action { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.btn-add-part {
+  padding: 6px 14px; border: none; border-radius: 8px;
+  background: rgba(124,58,237,.1); color: #7c3aed;
+  font-size: 12.5px; font-weight: 700; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; transition: all .15s;
+  min-width: 80px; display: flex; align-items: center; justify-content: center; gap: 4px;
+}
+.btn-add-part:hover:not(:disabled) { background: #7c3aed; color: #fff; }
+.btn-add-part:disabled { opacity: .5; cursor: not-allowed; }
+
+.already-used-badge {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 600; color: #059669;
+}
+
+.spinner-xs {
+  width: 12px; height: 12px;
+  border: 2px solid rgba(124,58,237,.3); border-top-color: #7c3aed;
+  border-radius: 50%; animation: spin .7s linear infinite; display: inline-block;
+}
+
+/* ════════════════════════════════════════════════════
    FACTURE — bouton invoice dans la table
 ════════════════════════════════════════════════════ */
 .action-btn.invoice { color: #059669; }
-.action-btn.invoice:hover { background: rgba(16,185,129,.1); color: #047857; }
+.action-btn.invoice:hover:not(:disabled) { background: rgba(16,185,129,.1); color: #047857; }
+.action-btn.invoice:disabled,
+.action-btn.invoice.disabled { color: #d1d5db; cursor: not-allowed; background: transparent; }
 
 /* ════════════════════════════════════════════════════
    FACTURE — modal (grande largeur)
