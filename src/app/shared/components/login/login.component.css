@@ -202,6 +202,14 @@ input:focus {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── Register link ── */
+.register-link {
+  text-align: center; font-size: 13px; color: #6b7280; margin-top: 14px; margin-bottom: 0;
+}
+
+.register-link a { color: #f59e0b; font-weight: 600; text-decoration: none; }
+.register-link a:hover { text-decoration: underline; }
+
 /* ── Demo section ── */
 .demo-section {
   margin-top: 24px;

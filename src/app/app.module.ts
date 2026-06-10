@@ -17,7 +17,9 @@ import { SearchBarComponent } from './shared/components/search-bar/search-bar.co
 import { StatCardComponent }  from './shared/components/stat-card/stat-card.component';
 
 // Auth
-import { LoginComponent } from './shared/components/login/login.component';
+import { LoginComponent }    from './shared/components/login/login.component';
+import { RegisterComponent } from './shared/components/register/register.component';
+import { UsersComponent }    from './shared/components/users/users.component';
 
 // Pages
 import { DashboardComponent } from './shared/components/dashboard/dashboard.component';
@@ -34,6 +36,8 @@ import { WhatsappComponent }  from './shared/components/whatsapp/whatsapp.compon
   declarations: [
     AppComponent,
     LoginComponent,
+    RegisterComponent,
+    UsersComponent,
     SidebarComponent,
     TopbarComponent,
     SearchBarComponent,

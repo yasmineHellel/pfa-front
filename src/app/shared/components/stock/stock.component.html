@@ -1,63 +1,789 @@
-<div class="section-header" style="margin-bottom:16px;">
-  <div class="section-title" style="font-size:16px;">Stock Pièces</div>
-  <button class="btn btn-primary">+ Ajouter pièce</button>
+<!-- ══ Header ══════════════════════════════════════════════════ -->
+<div class="page-header">
+  <div>
+    <div class="page-title">Stock Pièces</div>
+    <div class="page-sub" *ngIf="isMecanicien">Votre inventaire personnel</div>
+    <div class="page-sub" *ngIf="isAdmin">Inventaire global du garage</div>
+    <div class="page-sub" *ngIf="isFournisseur">Gérez votre catalogue et vos commandes reçues</div>
+  </div>
+  <button class="btn btn-primary" *ngIf="!isFournisseur" (click)="openModal()">+ Ajouter une pièce</button>
 </div>
 
-<div *ngIf="loading" class="text-center py-4" style="color:var(--text-3)">Chargement…</div>
-<div *ngIf="error" class="badge badge-red" style="margin-bottom:12px">{{ error }}</div>
+<!-- ══════════════════════════════════════════════════════════════
+     VUE FOURNISSEUR
+══════════════════════════════════════════════════════════════ -->
+<ng-container *ngIf="isFournisseur">
 
-<div class="table-card" *ngIf="!loading">
-  <app-search-bar
-    placeholder="🔍  Rechercher par référence, nom, catégorie…"
-    [showFilter]="true"
-    (searchChange)="onSearch($event)"
-  ></app-search-bar>
+  <!-- Onglets fournisseur -->
+  <div class="main-tabs">
+    <button [class.active]="fournisseurTab === 'pieces'" (click)="fournisseurTab = 'pieces'">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+      </svg>
+      Mes pièces exposées
+      <span class="tab-badge">{{ myPieces.length }}</span>
+    </button>
+    <button [class.active]="fournisseurTab === 'orders'" (click)="fournisseurTab = 'orders'">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <path d="M16 10a4 4 0 0 1-8 0"/>
+      </svg>
+      Commandes reçues
+      <span class="tab-badge">{{ receivedOrders.length }}</span>
+    </button>
+  </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Référence</th>
-        <th>Nom de la pièce</th>
-        <th>Catégorie</th>
-        <th>Prix unitaire</th>
-        <th>Quantité</th>
-        <th>Seuil alerte</th>
-        <th>Statut</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let item of filtered">
-        <td style="font-weight:600;color:var(--accent)">{{ item.ref }}</td>
-        <td style="font-weight:500">{{ item.name }}</td>
-        <td>
-          <span class="badge" [ngClass]="'badge-' + item.categoryColor">{{ item.category }}</span>
-        </td>
-        <td>{{ item.unitPrice | number }} TND</td>
-        <td [style.color]="qtyColor(item)" style="font-weight:700">{{ item.quantity }}</td>
-        <td class="td-muted">{{ item.alertThreshold }}</td>
-        <td>
-          <span class="badge" [ngClass]="statusBadge(item.status)">{{ statusLabel(item.status) }}</span>
-        </td>
-        <td>
-          <div class="action-group">
-            <button class="action-btn" title="Éditer">
-              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-            </button>
-            <button class="action-btn danger" title="Supprimer" (click)="delete(item.id)">
-              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <polyline points="3 6 5 6 21 6"/>
-                <path d="M19 6l-1 14H6L5 6"/>
-                <path d="M10 11v6M14 11v6"/>
-                <path d="M9 6V4h6v2"/>
-              </svg>
-            </button>
+  <!-- ── Onglet 1 : Mes pièces ─────────────────────────────────── -->
+  <ng-container *ngIf="fournisseurTab === 'pieces'">
+    <div class="loading-row" *ngIf="myPiecesLoading">
+      <span class="spinner-amber"></span> Chargement…
+    </div>
+    <div class="piece-grid four-col" *ngIf="!myPiecesLoading">
+      <div class="piece-card" *ngFor="let p of myPieces">
+
+        <div class="piece-img" [style.background]="getCategoryStyle(p.category).bg">
+          <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"
+               [style.color]="getCategoryStyle(p.category).color">
+            <path [attr.d]="getCategoryStyle(p.category).svg"/>
+          </svg>
+        </div>
+
+        <div class="piece-info">
+          <div class="piece-name">{{ p.name }}</div>
+          <div class="piece-ref">{{ p.ref }}</div>
+          <div class="piece-meta">
+            <span class="badge" [ngClass]="'badge-' + p.categoryColor">{{ p.category }}</span>
+            <span class="piece-stock">
+              <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/></svg>
+              {{ p.availableQty }} en stock
+            </span>
           </div>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+          <div class="piece-desc" *ngIf="p.description">{{ p.description }}</div>
+        </div>
+
+        <div class="piece-footer">
+          <div class="piece-price">{{ p.unitPrice | number }} TND</div>
+          <button class="btn-edit-piece" (click)="openEditPiece(p)" title="Modifier">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            Modifier
+          </button>
+        </div>
+
+      </div>
+      <div class="cat-empty" *ngIf="myPieces.length === 0">Aucune pièce dans votre catalogue.</div>
+    </div>
+  </ng-container>
+
+  <!-- ── Onglet 2 : Commandes reçues ───────────────────────────── -->
+  <ng-container *ngIf="fournisseurTab === 'orders'">
+    <div class="loading-row" *ngIf="ordersLoading">
+      <span class="spinner-amber"></span> Chargement des commandes…
+    </div>
+
+    <div class="table-card" *ngIf="!ordersLoading">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>Date</th>
+            <th>Mécanicien</th>
+            <th>Contact</th>
+            <th>Pièces</th>
+            <th>Total</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let o of receivedOrders">
+            <!-- Ligne principale -->
+            <tr class="order-row" (click)="toggleOrder(o.id!)" [class.expanded]="expandedOrderId === o.id">
+              <td class="order-toggle-cell">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                     [style.transform]="expandedOrderId === o.id ? 'rotate(90deg)' : ''"
+                     style="transition:transform .2s; color:#9ca3af">
+                  <polyline points="9 18 15 12 9 6"/>
+                </svg>
+              </td>
+              <td class="td-muted">{{ o.date }}</td>
+              <td>
+                <div class="order-mechanic">
+                  <div class="mechanic-avatar">{{ o.mechanicName[0] }}</div>
+                  <span style="font-weight:500">{{ o.mechanicName }}</span>
+                </div>
+              </td>
+              <td class="td-muted">{{ o.mechanicPhone || '—' }}</td>
+              <td>
+                <span class="pieces-summary">{{ o.items.length }} pièce{{ o.items.length !== 1 ? 's' : '' }}</span>
+              </td>
+              <td><strong style="color:#d97706">{{ o.totalAmount | number }} TND</strong></td>
+              <td (click)="$event.stopPropagation()">
+                <select class="status-select" [ngClass]="orderStatusBadge(o.status)"
+                        [ngModel]="o.status"
+                        (ngModelChange)="updateStatus(o, $event)">
+                  <option *ngFor="let s of ORDER_STATUSES" [value]="s.value">{{ s.label }}</option>
+                </select>
+              </td>
+            </tr>
+            <!-- Détail pièces (expandable) -->
+            <tr class="order-detail-row" *ngIf="expandedOrderId === o.id">
+              <td colspan="7" class="order-detail-cell">
+                <div class="order-items-list">
+                  <div class="order-item-row" *ngFor="let item of o.items">
+                    <div class="order-item-icon" [style.background]="getCategoryStyle('Autre').bg">
+                      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"
+                           [style.color]="getCategoryStyle('Autre').color">
+                        <path [attr.d]="getCategoryStyle('Autre').svg"/>
+                      </svg>
+                    </div>
+                    <div style="flex:1">
+                      <span class="order-item-name">{{ item.pieceName }}</span>
+                      <span class="order-item-ref">{{ item.ref }}</span>
+                    </div>
+                    <span class="order-item-qty">× {{ item.quantity }}</span>
+                    <span class="order-item-price">{{ (item.unitPrice * item.quantity) | number }} TND</span>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </ng-container>
+          <tr *ngIf="receivedOrders.length === 0">
+            <td colspan="7" class="empty-row">Aucune commande reçue pour le moment.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+
+</ng-container>
+
+<!-- ══════════════════════════════════════════════════════════════
+     VUE MÉCANICIEN / ADMIN
+══════════════════════════════════════════════════════════════ -->
+<ng-container *ngIf="!isFournisseur">
+
+<!-- ══ Onglets principaux ═══════════════════════════════════════ -->
+<div class="main-tabs">
+  <button [class.active]="mainTab === 'inventory'"  (click)="mainTab = 'inventory'">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+    </svg>
+    Mon Inventaire
+  </button>
+  <button [class.active]="mainTab === 'suppliers'"  (click)="mainTab = 'suppliers'">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+    Fournisseurs inscrits
+    <span class="tab-badge">{{ registeredSuppliers.length }}</span>
+  </button>
+  <button *ngIf="isMecanicien" [class.active]="mainTab === 'my-orders'"
+          (click)="mainTab = 'my-orders'; loadMechOrders()">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <path d="M16 10a4 4 0 0 1-8 0"/>
+    </svg>
+    Mes commandes
+    <span class="tab-badge" *ngIf="mechOrders.length">{{ mechOrders.length }}</span>
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     ONGLET 1 — INVENTAIRE
+══════════════════════════════════════════════════════════════ -->
+<ng-container *ngIf="mainTab === 'inventory'">
+  <div *ngIf="loading" class="loading-row">
+    <span class="spinner-amber"></span> Chargement…
+  </div>
+  <div *ngIf="error" class="api-error">{{ error }}</div>
+
+  <div class="table-card" *ngIf="!loading">
+    <app-search-bar placeholder="🔍  Rechercher par référence, nom, catégorie…"
+                    [showFilter]="true" (searchChange)="onSearch($event)"></app-search-bar>
+    <table>
+      <thead>
+        <tr>
+          <th>Référence</th>
+          <th>Nom de la pièce</th>
+          <th>Catégorie</th>
+          <th>Fournisseur</th>
+          <th *ngIf="isAdmin">Mécanicien</th>
+          <th>Prix unitaire</th>
+          <th>Quantité</th>
+          <th>Statut</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of filtered">
+          <td class="ref-cell">{{ item.ref }}</td>
+          <td style="font-weight:500">{{ item.name }}</td>
+          <td>
+            <span class="badge" [ngClass]="'badge-' + item.categoryColor">{{ item.category }}</span>
+          </td>
+          <td>
+            <span *ngIf="item.supplierName" class="supplier-chip">{{ item.supplierName }}</span>
+            <span *ngIf="!item.supplierName" class="td-muted">—</span>
+          </td>
+          <td *ngIf="isAdmin" class="td-muted">{{ item.mechanicName || '—' }}</td>
+          <td>{{ item.unitPrice | number }} TND</td>
+          <td [style.color]="qtyColor(item)" style="font-weight:700">{{ item.quantity }}</td>
+          <td>
+            <span class="badge" [ngClass]="statusBadge(item.status)">{{ statusLabel(item.status) }}</span>
+          </td>
+          <td>
+            <div class="action-group">
+              <button class="action-btn danger" title="Supprimer" (click)="confirmDelete(item)">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6l-1 14H6L5 6"/>
+                  <path d="M10 11v6M14 11v6"/>
+                  <path d="M9 6V4h6v2"/>
+                </svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="filtered.length === 0">
+          <td [attr.colspan]="isAdmin ? 9 : 8" class="empty-row">Aucune pièce trouvée.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</ng-container>
+
+<!-- ══════════════════════════════════════════════════════════════
+     ONGLET 2 — FOURNISSEURS INSCRITS
+══════════════════════════════════════════════════════════════ -->
+<ng-container *ngIf="mainTab === 'suppliers'">
+
+  <div *ngIf="suppliersLoading" class="loading-row">
+    <span class="spinner-amber"></span> Chargement des fournisseurs…
+  </div>
+
+  <div class="suppliers-grid" *ngIf="!suppliersLoading">
+
+    <div class="supplier-card" *ngFor="let s of registeredSuppliers">
+      <div class="sc-header">
+        <div class="sc-avatar">{{ supplierInitials(s) }}</div>
+        <div>
+          <div class="sc-name">{{ s.firstName }} {{ s.lastName }}</div>
+          <div class="sc-company">{{ s.company || 'Indépendant' }}</div>
+        </div>
+        <span class="sc-status" [class.active]="s.active" [class.inactive]="!s.active">
+          {{ s.active ? 'Actif' : 'Inactif' }}
+        </span>
+      </div>
+      <div class="sc-info">
+        <div class="sc-info-item" *ngIf="s.phone">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+          </svg>
+          {{ s.phone }}
+        </div>
+        <div class="sc-info-item">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+            <polyline points="22,6 12,13 2,6"/>
+          </svg>
+          {{ s.email }}
+        </div>
+      </div>
+      <button class="btn-catalog" (click)="viewCatalog(s)">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+        </svg>
+        Voir le catalogue
+      </button>
+    </div>
+
+    <div class="empty-suppliers" *ngIf="registeredSuppliers.length === 0">
+      Aucun fournisseur inscrit pour le moment.
+    </div>
+  </div>
+
+</ng-container>
+
+<!-- ══════════════════════════════════════════════════════════════
+     ONGLET 3 — MES COMMANDES (mécanicien)
+══════════════════════════════════════════════════════════════ -->
+<ng-container *ngIf="mainTab === 'my-orders'">
+  <div class="loading-row" *ngIf="mechOrdersLoading">
+    <span class="spinner-amber"></span> Chargement de vos commandes…
+  </div>
+  <div class="table-card" *ngIf="!mechOrdersLoading">
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>Date</th>
+          <th>Fournisseur</th>
+          <th>Pièces</th>
+          <th>Total</th>
+          <th>Statut</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngFor="let o of mechOrders">
+          <tr class="order-row" (click)="toggleMechOrder(o.id!)" [class.expanded]="expandedMechOrderId === o.id">
+            <td class="order-toggle-cell">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                   [style.transform]="expandedMechOrderId === o.id ? 'rotate(90deg)' : ''"
+                   style="transition:transform .2s; color:#9ca3af">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </td>
+            <td class="td-muted">{{ o.date }}</td>
+            <td style="font-weight:500">{{ o.supplierName }}</td>
+            <td><span class="pieces-summary">{{ o.items.length }} pièce{{ o.items.length !== 1 ? 's' : '' }}</span></td>
+            <td><strong style="color:#d97706">{{ o.totalAmount | number }} TND</strong></td>
+            <td>
+              <span class="badge" [ngClass]="orderStatusBadge(o.status)">{{ orderStatusLabel(o.status) }}</span>
+            </td>
+          </tr>
+          <tr class="order-detail-row" *ngIf="expandedMechOrderId === o.id">
+            <td colspan="6" class="order-detail-cell">
+              <div class="order-items-list">
+                <div class="order-item-row" *ngFor="let item of o.items">
+                  <div class="order-item-icon" [style.background]="getCategoryStyle('Autre').bg">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"
+                         [style.color]="getCategoryStyle('Autre').color">
+                      <path [attr.d]="getCategoryStyle('Autre').svg"/>
+                    </svg>
+                  </div>
+                  <div style="flex:1">
+                    <span class="order-item-name">{{ item.pieceName }}</span>
+                    <span class="order-item-ref">{{ item.ref }}</span>
+                  </div>
+                  <span class="order-item-qty">× {{ item.quantity }}</span>
+                  <span class="order-item-price">{{ (item.unitPrice * item.quantity) | number }} TND</span>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </ng-container>
+        <tr *ngIf="mechOrders.length === 0">
+          <td colspan="6" class="empty-row">Vous n'avez pas encore passé de commande.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</ng-container>
+
+</ng-container>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODAL — Catalogue fournisseur + Commande
+════════════════════════════════════════════════════════════════ -->
+<div class="cat-backdrop" *ngIf="selectedSupplier" (click)="closeCatalog()">
+  <div class="cat-modal" (click)="$event.stopPropagation()">
+
+    <!-- Header -->
+    <div class="cat-header">
+      <div class="cat-header-left">
+        <div class="cat-supplier-avatar">
+          {{ supplierInitials(selectedSupplier) }}
+        </div>
+        <div>
+          <div class="cat-supplier-name">{{ selectedSupplier.company || (selectedSupplier.firstName + ' ' + selectedSupplier.lastName) }}</div>
+          <div class="cat-supplier-sub">
+            <span *ngIf="!catalogLoading">{{ catalog.length }} pièce{{ catalog.length !== 1 ? 's' : '' }} disponible{{ catalog.length !== 1 ? 's' : '' }}</span>
+            <span *ngIf="catalogLoading">Chargement…</span>
+          </div>
+        </div>
+      </div>
+      <button class="cat-close" (click)="closeCatalog()">
+        <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Search (catalog view only) -->
+    <div class="cat-search-wrap" *ngIf="!catalogLoading && catalog.length > 0 && orderView === 'catalog' && !orderSuccess">
+      <svg width="14" height="14" fill="none" stroke="#9ca3af" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" [(ngModel)]="catalogSearch" placeholder="Rechercher une pièce…" class="cat-search">
+    </div>
+
+    <!-- Loading -->
+    <div class="cat-loading" *ngIf="catalogLoading">
+      <span class="spinner-amber"></span> Chargement du catalogue…
+    </div>
+
+    <!-- Success screen -->
+    <div class="order-success" *ngIf="orderSuccess">
+      <div class="success-icon">
+        <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+      </div>
+      <h3>Commande envoyée !</h3>
+      <p>Votre commande a été transmise à <strong>{{ selectedSupplier.company || selectedSupplier.firstName }}</strong>.<br>Le fournisseur sera notifié et vous contactera sous peu.</p>
+      <button class="btn-close-success" (click)="closeCatalog()">Fermer</button>
+    </div>
+
+    <!-- ── CATALOGUE (step 1) ─────────────────────────────────── -->
+    <div class="cat-body" *ngIf="!catalogLoading && !orderSuccess && orderView === 'catalog'">
+
+      <div class="cat-empty" *ngIf="filteredCatalog.length === 0">
+        Aucune pièce trouvée.
+      </div>
+
+      <div class="piece-grid">
+        <div class="piece-card" *ngFor="let p of filteredCatalog" [class.selected]="qtyFor(p.id) > 0">
+
+          <!-- Image / icône catégorie -->
+          <div class="piece-img" [style.background]="getCategoryStyle(p.category).bg">
+            <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"
+                 [style.color]="getCategoryStyle(p.category).color">
+              <path [attr.d]="getCategoryStyle(p.category).svg"/>
+            </svg>
+          </div>
+
+          <!-- Infos -->
+          <div class="piece-info">
+            <div class="piece-name">{{ p.name }}</div>
+            <div class="piece-ref">{{ p.ref }}</div>
+            <div class="piece-meta">
+              <span class="badge" [ngClass]="'badge-' + p.categoryColor">{{ p.category }}</span>
+              <span class="piece-stock">
+                <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/></svg>
+                {{ p.availableQty }} en stock
+              </span>
+            </div>
+            <div class="piece-desc" *ngIf="p.description">{{ p.description }}</div>
+          </div>
+
+          <!-- Prix + action -->
+          <div class="piece-footer">
+            <div class="piece-price">{{ p.unitPrice | number }} TND</div>
+
+            <!-- Pas encore ajouté -->
+            <button class="btn-add-piece" *ngIf="qtyFor(p.id) === 0" (click)="addPiece(p)">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Commander
+            </button>
+
+            <!-- Sélectionné avec qty -->
+            <div class="qty-ctrl" *ngIf="qtyFor(p.id) > 0">
+              <button class="qty-btn" (click)="changeQty(p.id, -1)">−</button>
+              <span class="qty-val">{{ qtyFor(p.id) }}</span>
+              <button class="qty-btn" (click)="changeQty(p.id, +1)">+</button>
+              <button class="qty-remove" (click)="removePiece(p.id)" title="Retirer">
+                <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ── RÉCAPITULATIF (step 2) ─────────────────────────────── -->
+    <div class="order-review" *ngIf="!catalogLoading && !orderSuccess && orderView === 'review'">
+
+      <div class="review-intro">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
+        Vérifiez votre sélection avant de confirmer la commande
+      </div>
+
+      <div class="review-list">
+        <div class="review-item" *ngFor="let item of selectedItems">
+          <div class="review-item-icon" [style.background]="getCategoryStyle(item.piece.category).bg">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"
+                 [style.color]="getCategoryStyle(item.piece.category).color">
+              <path [attr.d]="getCategoryStyle(item.piece.category).svg"/>
+            </svg>
+          </div>
+          <div class="review-item-info">
+            <div class="review-item-name">{{ item.piece.name }}</div>
+            <div class="review-item-ref">{{ item.piece.ref }} &middot; {{ item.piece.category }}</div>
+          </div>
+          <div class="review-item-qty-ctrl">
+            <button class="qty-btn" (click)="changeQty(item.piece.id, -1)">−</button>
+            <span class="qty-val">{{ item.qty }}</span>
+            <button class="qty-btn" (click)="changeQty(item.piece.id, +1)">+</button>
+          </div>
+          <div class="review-item-subtotal">
+            {{ (item.piece.unitPrice * item.qty) | number }} TND
+          </div>
+          <button class="review-remove" (click)="removePiece(item.piece.id)" title="Retirer">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="review-total-row">
+        <span class="review-total-label">Total commande</span>
+        <span class="review-total-amt">{{ orderTotal | number }} TND</span>
+      </div>
+
+    </div>
+
+    <!-- Footer barre commande (step 1) -->
+    <div class="cat-order-bar" *ngIf="orderCount > 0 && !orderSuccess && orderView === 'catalog'">
+      <div class="order-bar-info">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <path d="M16 10a4 4 0 0 1-8 0"/>
+        </svg>
+        <span><strong>{{ orderCount }}</strong> pièce{{ orderCount !== 1 ? 's' : '' }} sélectionnée{{ orderCount !== 1 ? 's' : '' }}</span>
+        <span class="order-total-amt">{{ orderTotal | number }} TND</span>
+      </div>
+      <button class="btn-send-order" (click)="openReview()">
+        Voir le récapitulatif
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Footer confirmer commande (step 2) -->
+    <div class="review-footer" *ngIf="!orderSuccess && orderView === 'review'">
+      <button class="btn-back-catalog" (click)="backToCatalog()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        Modifier la sélection
+      </button>
+      <button class="btn-confirm-order" (click)="sendOrder()" [disabled]="orderLoading || orderCount === 0">
+        <span *ngIf="!orderLoading">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+          Confirmer et envoyer
+        </span>
+        <span *ngIf="orderLoading" class="spinner-white-sm"></span>
+      </button>
+    </div>
+    <div class="order-error" *ngIf="orderError">{{ orderError }}</div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     POPUP — Confirmation suppression
+════════════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" *ngIf="itemToDelete" (click)="cancelDelete()">
+  <div class="confirm-box" (click)="$event.stopPropagation()">
+    <div class="confirm-icon-wrap">
+      <div class="confirm-icon">
+        <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+          <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+        </svg>
+      </div>
+    </div>
+    <h3 class="confirm-title">Supprimer cette pièce ?</h3>
+    <p class="confirm-desc">
+      <strong>{{ itemToDelete.name }}</strong> ({{ itemToDelete.ref }}) sera retirée de l'inventaire définitivement.
+    </p>
+    <div class="confirm-detail-row">
+      <span class="badge" [ngClass]="statusBadge(itemToDelete.status)">{{ statusLabel(itemToDelete.status) }}</span>
+      <span class="confirm-cost">{{ itemToDelete.quantity }} unité{{ itemToDelete.quantity !== 1 ? 's' : '' }}</span>
+    </div>
+    <div class="confirm-btns">
+      <button class="btn-cancel-del" (click)="cancelDelete()" [disabled]="deleting">Annuler</button>
+      <button class="btn-confirm-del" (click)="doDelete()" [disabled]="deleting">
+        <span *ngIf="!deleting">Supprimer définitivement</span>
+        <span *ngIf="deleting" class="spinner-white"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODAL — Modifier une pièce (fournisseur)
+════════════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" *ngIf="editingPiece" (click)="closeEditPiece()">
+  <div class="modal-box edit-piece-box" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <div class="modal-icon edit-icon">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+        </div>
+        <div>
+          <h2 class="modal-title">Modifier la pièce</h2>
+          <p class="modal-sub">{{ editingPiece!.name }} — {{ editingPiece!.ref }}</p>
+        </div>
+      </div>
+      <button class="modal-close" (click)="closeEditPiece()">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <form [formGroup]="editPieceForm" (ngSubmit)="submitEditPiece()">
+      <div class="form-section">
+        <div class="form-row">
+          <div class="field">
+            <label>Quantité disponible <span class="req">*</span></label>
+            <input type="number" formControlName="availableQty" min="0"
+                   [class.field-error]="editPieceForm.get('availableQty')?.invalid && editPieceForm.get('availableQty')?.touched">
+          </div>
+          <div class="field">
+            <label>Prix unitaire (TND)</label>
+            <div class="input-prefix-wrap">
+              <span class="input-prefix">TND</span>
+              <input type="number" formControlName="unitPrice" min="0">
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Description</label>
+          <input type="text" formControlName="description" placeholder="Description courte…">
+        </div>
+      </div>
+
+      <div class="form-api-error" *ngIf="editError">{{ editError }}</div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" (click)="closeEditPiece()">Annuler</button>
+        <button type="submit" class="btn-save" [disabled]="editSubmitting">
+          <span *ngIf="!editSubmitting">Enregistrer</span>
+          <span *ngIf="editSubmitting" class="spinner-white"></span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODAL — Ajouter une pièce
+════════════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <div class="modal-icon">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </div>
+        <div>
+          <h2 class="modal-title">Ajouter une pièce</h2>
+          <p class="modal-sub">Nouvelle entrée dans votre inventaire</p>
+        </div>
+      </div>
+      <button class="modal-close" (click)="closeModal()">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+
+      <!-- Pièce info -->
+      <div class="form-section">
+        <div class="section-label">Informations de la pièce</div>
+        <div class="form-row">
+          <div class="field" style="flex:2">
+            <label>Nom de la pièce <span class="req">*</span></label>
+            <input type="text" formControlName="name" placeholder="Ex: Plaquettes de frein AV"
+                   [class.field-error]="invalid('name')">
+            <span class="err-msg" *ngIf="invalid('name')">Requis</span>
+          </div>
+          <div class="field">
+            <label>Référence</label>
+            <input type="text" formControlName="ref" placeholder="REF-XXXX">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>Catégorie <span class="req">*</span></label>
+            <select formControlName="category">
+              <option *ngFor="let c of CATEGORIES" [value]="c.label">{{ c.label }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Prix unitaire (TND)</label>
+            <div class="input-prefix-wrap">
+              <span class="input-prefix">TND</span>
+              <input type="number" formControlName="unitPrice" min="0" placeholder="0">
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>Quantité <span class="req">*</span></label>
+            <input type="number" formControlName="quantity" min="0" placeholder="1"
+                   [class.field-error]="invalid('quantity')">
+          </div>
+          <div class="field">
+            <label>Seuil d'alerte</label>
+            <input type="number" formControlName="alertThreshold" min="0" placeholder="5">
+          </div>
+        </div>
+      </div>
+
+      <!-- Fournisseur -->
+      <div class="form-section">
+        <div class="section-label-row">
+          <span class="section-label">Fournisseur</span>
+          <div class="mode-toggle">
+            <button type="button" [class.active]="supplierMode === 'registered'" (click)="setSupplierMode('registered')">Fournisseur inscrit</button>
+            <button type="button" [class.active]="supplierMode === 'external'"   (click)="setSupplierMode('external')">Fournisseur externe</button>
+          </div>
+        </div>
+
+        <div class="field" *ngIf="supplierMode === 'registered'">
+          <label>Sélectionner un fournisseur</label>
+          <select formControlName="supplierId">
+            <option value="">— Aucun (ou non spécifié) —</option>
+            <option *ngFor="let s of registeredSuppliers" [value]="s.id" [disabled]="!s.active">
+              {{ s.company || (s.firstName + ' ' + s.lastName) }}{{ !s.active ? ' (inactif)' : '' }}
+            </option>
+          </select>
+        </div>
+
+        <div *ngIf="supplierMode === 'external'">
+          <div class="form-row">
+            <div class="field">
+              <label>Nom du fournisseur</label>
+              <input type="text" formControlName="externalName" placeholder="Ex: Auto Pieces Sfax">
+            </div>
+            <div class="field">
+              <label>Téléphone</label>
+              <input type="text" formControlName="externalPhone" placeholder="+216 XX XXX XXX">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-api-error" *ngIf="formError">{{ formError }}</div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" (click)="closeModal()">Annuler</button>
+        <button type="submit" class="btn-save" [disabled]="submitting">
+          <span *ngIf="!submitting">Ajouter au stock</span>
+          <span *ngIf="submitting" class="spinner-white"></span>
+        </button>
+      </div>
+
+    </form>
+  </div>
 </div>

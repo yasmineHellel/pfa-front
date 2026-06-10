@@ -1,6 +1,6 @@
 <div class="section-header" style="margin-bottom:16px;">
   <div class="section-title" style="font-size:16px;">Réparations</div>
-  <button class="btn btn-primary">+ Nouvelle réparation</button>
+  <button class="btn btn-primary" (click)="openModal()">+ Nouvelle réparation</button>
 </div>
 
 <div class="tabs">
@@ -20,7 +20,7 @@
         <th>Ref</th>
         <th>Client / Véhicule</th>
         <th>Panne décrite</th>
-        <th>Mécanicien</th>
+        <th *ngIf="isAdmin">Mécanicien</th>
         <th>Date entrée</th>
         <th>Statut</th>
         <th>Coût</th>
@@ -40,24 +40,32 @@
           </div>
         </td>
         <td>{{ r.description }}</td>
-        <td>{{ r.mechanicName }}</td>
+        <td *ngIf="isAdmin">{{ r.mechanicName }}</td>
         <td class="td-muted">{{ r.entryDate }}</td>
         <td><span class="badge" [ngClass]="statusBadge(r.status)">{{ statusLabel(r.status) }}</span></td>
         <td style="font-weight:600">{{ r.cost | number }} TND</td>
         <td>
           <div class="action-group">
-            <button class="action-btn" title="Voir">
+            <button class="action-btn" title="Voir les détails" (click)="openDetail(r)">
               <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
               </svg>
             </button>
-            <button class="action-btn" title="Éditer">
+            <button class="action-btn" title="Modifier" (click)="openEdit(r)">
               <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
               </svg>
             </button>
-            <button class="action-btn danger" title="Supprimer">
+            <button class="action-btn invoice" title="Générer une facture" (click)="openInvoice(r)">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+              </svg>
+            </button>
+            <button class="action-btn danger" title="Supprimer" (click)="confirmDelete(r)">
               <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <polyline points="3 6 5 6 21 6"/>
                 <path d="M19 6l-1 14H6L5 6"/>
@@ -66,6 +74,622 @@
           </div>
         </td>
       </tr>
+      <tr *ngIf="filtered.length === 0 && !loading">
+        <td [attr.colspan]="isAdmin ? 8 : 7" style="text-align:center;padding:32px;color:#9ca3af;">
+          Aucune réparation trouvée.
+        </td>
+      </tr>
     </tbody>
   </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     POPUP CONFIRMATION SUPPRESSION
+════════════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" *ngIf="repairToDelete" (click)="cancelDelete()">
+  <div class="confirm-box" (click)="$event.stopPropagation()">
+
+    <div class="confirm-icon-wrap">
+      <div class="confirm-icon">
+        <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14H6L5 6"/>
+          <path d="M10 11v6"/><path d="M14 11v6"/>
+          <path d="M9 6V4h6v2"/>
+        </svg>
+      </div>
+    </div>
+
+    <h3 class="confirm-title">Supprimer cette réparation ?</h3>
+    <p class="confirm-desc">
+      La réparation <strong>#{{ repairToDelete.id }}</strong> de
+      <strong>{{ repairToDelete.clientName }}</strong>
+      ({{ repairToDelete.vehicleName }}) sera définitivement supprimée.
+      Cette action est irréversible.
+    </p>
+
+    <div class="confirm-detail-row">
+      <span class="badge" [ngClass]="statusBadge(repairToDelete.status)">{{ statusLabel(repairToDelete.status) }}</span>
+      <span class="confirm-cost">{{ repairToDelete.cost | number }} TND</span>
+    </div>
+
+    <div class="confirm-btns">
+      <button class="btn-cancel-del" (click)="cancelDelete()" [disabled]="deleting">Annuler</button>
+      <button class="btn-confirm-del" (click)="doDelete()" [disabled]="deleting">
+        <span *ngIf="!deleting">Supprimer définitivement</span>
+        <span *ngIf="deleting" class="spinner-white"></span>
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PANNEAU DÉTAILS — Réparation
+════════════════════════════════════════════════════════════════ -->
+<div class="drawer-overlay" *ngIf="selectedRepair" (click)="closeDetail()"></div>
+
+<div class="detail-drawer" [class.open]="selectedRepair" *ngIf="selectedRepair">
+  <div class="drawer-header">
+    <div class="drawer-header-left">
+      <div class="drawer-icon">
+        <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="drawer-title">Réparation #{{ selectedRepair.id }}</div>
+        <div class="drawer-sub">{{ selectedRepair.entryDate }}</div>
+      </div>
+    </div>
+    <button class="drawer-close" (click)="closeDetail()">
+      <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Statut + coût -->
+  <div class="drawer-hero">
+    <span class="badge" [ngClass]="statusBadge(selectedRepair.status)">{{ statusLabel(selectedRepair.status) }}</span>
+    <span class="hero-cost">{{ selectedRepair.cost | number }} TND</span>
+  </div>
+
+  <div class="drawer-body">
+
+    <!-- Client -->
+    <div class="detail-block">
+      <div class="block-label">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+        Client
+      </div>
+      <div class="block-card">
+        <div class="block-avatar" [ngClass]="'av-' + avatarColor(selectedRepair.clientId)">
+          {{ initials(selectedRepair.clientName) }}
+        </div>
+        <div>
+          <div class="block-main">{{ selectedRepair.clientName }}</div>
+          <div class="block-meta">{{ selectedRepair.clientPhone }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Véhicule -->
+    <div class="detail-block">
+      <div class="block-label">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
+          <path d="M5 17H3V13L5 7h9l3 4h3l1 3v3h-2M5 17h10M9 7v4"/>
+        </svg>
+        Véhicule
+      </div>
+      <div class="block-card">
+        <div class="block-avatar car-av">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M5 17H3V13L5 7h9l3 4h3l1 3v3h-2M5 17h10"/>
+            <circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>
+          </svg>
+        </div>
+        <div>
+          <div class="block-main">{{ selectedRepair.vehicleName }}</div>
+          <div class="block-meta block-plate">{{ selectedRepair.plate }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mécanicien (admin seulement) -->
+    <div class="detail-block" *ngIf="isAdmin">
+      <div class="block-label">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+        </svg>
+        Mécanicien assigné
+      </div>
+      <div class="block-card">
+        <div class="block-avatar meca-av">{{ initials(selectedRepair.mechanicName) }}</div>
+        <div class="block-main">{{ selectedRepair.mechanicName }}</div>
+      </div>
+    </div>
+
+    <!-- Description -->
+    <div class="detail-block">
+      <div class="block-label">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+        Description de la panne
+      </div>
+      <p class="description-text">{{ selectedRepair.description }}</p>
+    </div>
+
+    <!-- Récap financier -->
+    <div class="detail-block">
+      <div class="block-label">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+        </svg>
+        Récapitulatif
+      </div>
+      <div class="recap-grid">
+        <div class="recap-item">
+          <div class="recap-label">Date d'entrée</div>
+          <div class="recap-value">{{ selectedRepair.entryDate }}</div>
+        </div>
+        <div class="recap-item">
+          <div class="recap-label">Coût total</div>
+          <div class="recap-value accent">{{ selectedRepair.cost | number }} TND</div>
+        </div>
+        <div class="recap-item">
+          <div class="recap-label">Statut</div>
+          <div class="recap-value">
+            <span class="badge" [ngClass]="statusBadge(selectedRepair.status)">{{ statusLabel(selectedRepair.status) }}</span>
+          </div>
+        </div>
+        <div class="recap-item">
+          <div class="recap-label">Ref.</div>
+          <div class="recap-value accent">#{{ selectedRepair.id }}</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODAL — Nouvelle réparation
+════════════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+
+    <!-- Header -->
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <div class="modal-icon" [class.edit-icon]="modalMode === 'edit'">
+          <svg *ngIf="modalMode === 'create'" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+          </svg>
+          <svg *ngIf="modalMode === 'edit'" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M11 4H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+        </div>
+        <div>
+          <h2 class="modal-title">{{ modalMode === 'create' ? 'Nouvelle réparation' : 'Modifier la réparation #' + editingRepair?.id }}</h2>
+          <p class="modal-sub" *ngIf="modalMode === 'create'">
+            Réparation assignée à <strong>{{ authService.getCurrentUser()?.firstName }} {{ authService.getCurrentUser()?.lastName }}</strong>
+          </p>
+          <p class="modal-sub" *ngIf="modalMode === 'edit'">
+            {{ editingRepair?.clientName }} — {{ editingRepair?.vehicleName }}
+          </p>
+        </div>
+      </div>
+      <button class="modal-close" (click)="closeModal()">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-loading" *ngIf="dataLoading">
+      <span class="spinner-amber"></span> Chargement des données…
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" *ngIf="!dataLoading">
+
+      <!-- ══ MODE ÉDITION : résumé client/véhicule en lecture seule ══ -->
+      <div class="edit-summary" *ngIf="modalMode === 'edit' && editingRepair">
+        <div class="edit-summary-item">
+          <div class="block-avatar" [ngClass]="'av-' + avatarColor(editingRepair.clientId)">
+            {{ initials(editingRepair.clientName) }}
+          </div>
+          <div>
+            <div class="es-label">Client</div>
+            <div class="es-value">{{ editingRepair.clientName }}</div>
+            <div class="es-meta">{{ editingRepair.clientPhone }}</div>
+          </div>
+        </div>
+        <div class="es-sep"></div>
+        <div class="edit-summary-item">
+          <div class="block-avatar car-av">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M5 17H3V13L5 7h9l3 4h3l1 3v3h-2M5 17h10"/>
+              <circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>
+            </svg>
+          </div>
+          <div>
+            <div class="es-label">Véhicule</div>
+            <div class="es-value">{{ editingRepair.vehicleName }}</div>
+            <div class="es-meta block-plate">{{ editingRepair.plate }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ SECTION CLIENT (création seulement) ══════════════════ -->
+      <ng-container *ngIf="modalMode === 'create'">
+      <!-- ══ SECTION CLIENT ══════════════════════════════════════ -->
+      <div class="form-section">
+        <div class="section-label-row">
+          <span class="section-label">Client</span>
+          <div class="mode-toggle">
+            <button type="button" [class.active]="clientMode === 'existing'" (click)="setClientMode('existing')">Client existant</button>
+            <button type="button" [class.active]="clientMode === 'new'"      (click)="setClientMode('new')">Nouveau client</button>
+          </div>
+        </div>
+
+        <!-- Existing client -->
+        <div *ngIf="clientMode === 'existing'" class="field">
+          <label>Sélectionner un client <span class="req">*</span></label>
+          <select formControlName="clientId">
+            <option value="">— Choisir dans la liste —</option>
+            <option *ngFor="let c of clients" [value]="c.id">
+              {{ c.firstName }} {{ c.lastName }} — {{ c.phone }}
+            </option>
+          </select>
+        </div>
+
+        <!-- New client -->
+        <div *ngIf="clientMode === 'new'">
+          <div class="form-row">
+            <div class="field">
+              <label>Prénom <span class="req">*</span></label>
+              <input type="text" formControlName="clientFirstName" placeholder="Prénom du client">
+            </div>
+            <div class="field">
+              <label>Nom <span class="req">*</span></label>
+              <input type="text" formControlName="clientLastName" placeholder="Nom du client">
+            </div>
+          </div>
+          <div class="field">
+            <label>Téléphone</label>
+            <input type="text" formControlName="clientPhone" placeholder="+216 XX XXX XXX">
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ SECTION VÉHICULE ════════════════════════════════════ -->
+      <div class="form-section">
+        <div class="section-label-row">
+          <span class="section-label">Véhicule</span>
+          <div class="mode-toggle" *ngIf="clientMode === 'existing'">
+            <button type="button" [class.active]="vehicleMode === 'existing'" (click)="setVehicleMode('existing')">Véhicule existant</button>
+            <button type="button" [class.active]="vehicleMode === 'new'"      (click)="setVehicleMode('new')">Nouveau véhicule</button>
+          </div>
+          <span class="mode-badge-new" *ngIf="clientMode === 'new'">Nouveau véhicule</span>
+        </div>
+
+        <!-- Existing vehicle (only when existing client is selected) -->
+        <div *ngIf="clientMode === 'existing' && vehicleMode === 'existing'" class="field">
+          <label>Sélectionner un véhicule <span class="req">*</span></label>
+          <select formControlName="vehicleId" [attr.disabled]="!form.get('clientId')?.value || null">
+            <option value="">— {{ form.get('clientId')?.value ? 'Choisir un véhicule' : 'Sélectionnez d\'abord un client' }} —</option>
+            <option *ngFor="let v of vehiclesForClient" [value]="v.id">
+              {{ v.brand }} {{ v.model }} — {{ v.plate }}
+            </option>
+          </select>
+          <span class="hint" *ngIf="form.get('clientId')?.value && vehiclesForClient.length === 0">
+            Aucun véhicule pour ce client — passez en "Nouveau véhicule"
+          </span>
+        </div>
+
+        <!-- New vehicle -->
+        <div *ngIf="vehicleMode === 'new' || clientMode === 'new'">
+          <div class="form-row">
+            <div class="field">
+              <label>Marque <span class="req">*</span></label>
+              <input type="text" formControlName="vehicleBrand" placeholder="Ex: Peugeot">
+            </div>
+            <div class="field">
+              <label>Modèle <span class="req">*</span></label>
+              <input type="text" formControlName="vehicleModel" placeholder="Ex: 308">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>Plaque <span class="req">*</span></label>
+              <input type="text" formControlName="vehiclePlate" placeholder="Ex: TU 5521 2024">
+            </div>
+            <div class="field">
+              <label>Année</label>
+              <input type="number" formControlName="vehicleYear" placeholder="2022" min="1990" max="2030">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      </ng-container><!-- fin create-only -->
+
+      <!-- ══ SECTION RÉPARATION ══════════════════════════════════ -->
+      <div class="form-section">
+        <div class="section-label">Détails de la réparation</div>
+
+        <div class="field">
+          <label>Description de la panne <span class="req">*</span></label>
+          <textarea formControlName="description" rows="3"
+                    placeholder="Ex: Remplacement plaquettes de frein, bruit moteur suspect…"
+                    [class.field-error]="invalid('description')"></textarea>
+          <span class="err-msg" *ngIf="invalid('description')">Requis</span>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label>Statut initial</label>
+            <select formControlName="status">
+              <option *ngFor="let s of STATUS_OPTIONS" [value]="s.value">{{ s.label }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Coût estimé (TND)</label>
+            <div class="input-prefix-wrap">
+              <span class="input-prefix">TND</span>
+              <input type="number" formControlName="cost" min="0" placeholder="0">
+            </div>
+          </div>
+        </div>
+
+        <div class="field" style="max-width:260px;">
+          <label>Date d'entrée <span class="req">*</span></label>
+          <input type="date" formControlName="entryDate" [class.field-error]="invalid('entryDate')">
+        </div>
+
+        <!-- Mécanicien modifiable par l'admin en mode édition -->
+        <div class="field" *ngIf="modalMode === 'edit' && isAdmin">
+          <label>Mécanicien assigné</label>
+          <input type="text" formControlName="mechanicName" placeholder="Nom du mécanicien">
+        </div>
+      </div>
+
+      <div class="form-api-error" *ngIf="formError">{{ formError }}</div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" (click)="closeModal()">Annuler</button>
+        <button type="submit" class="btn-save" [disabled]="submitting">
+          <span *ngIf="!submitting">{{ modalMode === 'create' ? 'Enregistrer la réparation' : 'Sauvegarder les modifications' }}</span>
+          <span *ngIf="submitting" class="spinner-white"></span>
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODAL — Générer une facture
+════════════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" *ngIf="showInvoiceModal" (click)="closeInvoice()">
+  <div class="modal-box invoice-box" (click)="$event.stopPropagation()">
+
+    <!-- ── FORMULAIRE DE FACTURE ───────────────────────────────── -->
+    <ng-container *ngIf="!generatedInvoice">
+
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon invoice-icon">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="modal-title">Générer une facture</h2>
+            <p class="modal-sub">Réparation #{{ invoiceRepair?.id }} — {{ invoiceRepair?.vehicleName }}</p>
+          </div>
+        </div>
+        <button class="modal-close" (click)="closeInvoice()">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Infos réparation (read-only) -->
+      <div class="inv-repair-info">
+        <div class="inv-info-row">
+          <div class="inv-info-item">
+            <span class="inv-info-label">Client</span>
+            <span class="inv-info-val">{{ invoiceRepair?.clientName }}</span>
+          </div>
+          <div class="inv-info-item">
+            <span class="inv-info-label">Téléphone</span>
+            <span class="inv-info-val">{{ invoiceRepair?.clientPhone }}</span>
+          </div>
+          <div class="inv-info-item">
+            <span class="inv-info-label">Véhicule</span>
+            <span class="inv-info-val">{{ invoiceRepair?.vehicleName }}</span>
+          </div>
+          <div class="inv-info-item">
+            <span class="inv-info-label">Plaque</span>
+            <span class="inv-info-val">{{ invoiceRepair?.plate }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pièces utilisées -->
+      <div class="form-section">
+        <div class="section-label-row">
+          <span class="section-label">Pièces utilisées</span>
+          <button type="button" class="btn-add-line" (click)="addInvoiceLine()">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Ajouter une pièce
+          </button>
+        </div>
+        <div class="inv-lines-header">
+          <span style="flex:3">Description</span>
+          <span style="flex:1;text-align:center">Qté</span>
+          <span style="flex:1;text-align:right">Prix unit.</span>
+          <span style="flex:1;text-align:right">Total</span>
+          <span style="width:28px"></span>
+        </div>
+        <div class="inv-line-row" *ngFor="let line of invoiceLines; let i = index">
+          <input type="text" class="inv-input flex-3" [(ngModel)]="line.description" placeholder="Nom de la pièce…">
+          <input type="number" class="inv-input inv-qty" [(ngModel)]="line.quantity" min="1">
+          <input type="number" class="inv-input inv-price" [(ngModel)]="line.unitPrice" min="0" placeholder="0">
+          <span class="inv-line-total">{{ (line.quantity * line.unitPrice) | number }} TND</span>
+          <button class="inv-remove-line" (click)="removeInvoiceLine(i)" [disabled]="invoiceLines.length === 1">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main d'œuvre -->
+      <div class="form-section">
+        <div class="section-label">Main d'œuvre</div>
+        <div class="form-row">
+          <div class="field" style="flex:3">
+            <label>Description</label>
+            <input type="text" [(ngModel)]="laborDescription" placeholder="Ex: Main d'œuvre — révision complète">
+          </div>
+          <div class="field" style="flex:1">
+            <label>Montant (TND)</label>
+            <input type="number" [(ngModel)]="laborCost" min="0" placeholder="0">
+          </div>
+        </div>
+      </div>
+
+      <!-- Totaux -->
+      <div class="inv-totals">
+        <div class="inv-total-line">
+          <span>Sous-total pièces</span>
+          <span>{{ invoiceTotalParts | number }} TND</span>
+        </div>
+        <div class="inv-total-line">
+          <span>Main d'œuvre</span>
+          <span>{{ laborCost | number }} TND</span>
+        </div>
+        <div class="inv-total-line grand">
+          <span>TOTAL</span>
+          <span>{{ invoiceTotal | number }} TND</span>
+        </div>
+      </div>
+
+      <div class="form-api-error" *ngIf="invoiceError">{{ invoiceError }}</div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" (click)="closeInvoice()">Annuler</button>
+        <button type="button" class="btn-save" (click)="submitInvoice()" [disabled]="invoiceSubmitting">
+          <span *ngIf="!invoiceSubmitting">Générer la facture</span>
+          <span *ngIf="invoiceSubmitting" class="spinner-white"></span>
+        </button>
+      </div>
+
+    </ng-container>
+
+    <!-- ── APERÇU FACTURE (print view) ────────────────────────── -->
+    <ng-container *ngIf="generatedInvoice">
+      <div class="inv-preview" id="invoice-print-area">
+
+        <div class="inv-preview-header">
+          <div class="inv-garage-info">
+            <div class="inv-garage-name">Garage CRM Pro</div>
+            <div class="inv-garage-sub">Service de réparation automobile</div>
+          </div>
+          <div class="inv-doc-info">
+            <div class="inv-doc-title">FACTURE</div>
+            <div class="inv-doc-number">N° {{ generatedInvoice.invoiceNumber }}</div>
+            <div class="inv-doc-date">Date : {{ generatedInvoice.invoiceDate }}</div>
+          </div>
+        </div>
+
+        <div class="inv-parties">
+          <div class="inv-party">
+            <div class="inv-party-label">Client</div>
+            <div class="inv-party-name">{{ generatedInvoice.clientName }}</div>
+            <div class="inv-party-detail">{{ generatedInvoice.clientPhone }}</div>
+          </div>
+          <div class="inv-party right">
+            <div class="inv-party-label">Véhicule</div>
+            <div class="inv-party-name">{{ generatedInvoice.vehicleName }}</div>
+            <div class="inv-party-detail">{{ generatedInvoice.plate }}</div>
+            <div class="inv-party-detail">Entrée : {{ generatedInvoice.entryDate }}</div>
+          </div>
+        </div>
+
+        <div class="inv-desc-box">
+          <span class="inv-desc-label">Prestation :</span>
+          {{ generatedInvoice.repairDescription }}
+        </div>
+
+        <table class="inv-table">
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>Qté</th>
+              <th>Prix unitaire</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let line of generatedInvoice.lines">
+              <td>{{ line.description }}</td>
+              <td class="center">{{ line.quantity }}</td>
+              <td class="right">{{ line.unitPrice | number }} TND</td>
+              <td class="right">{{ (line.quantity * line.unitPrice) | number }} TND</td>
+            </tr>
+            <tr class="labor-row" *ngIf="generatedInvoice.laborCost > 0">
+              <td>{{ generatedInvoice.laborDescription }}</td>
+              <td class="center">1</td>
+              <td class="right">{{ generatedInvoice.laborCost | number }} TND</td>
+              <td class="right">{{ generatedInvoice.laborCost | number }} TND</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="subtotal-row" *ngIf="generatedInvoice.lines.length > 0">
+              <td colspan="3" class="right">Sous-total pièces</td>
+              <td class="right">{{ generatedInvoice.totalParts | number }} TND</td>
+            </tr>
+            <tr class="total-row">
+              <td colspan="3" class="right"><strong>TOTAL TTC</strong></td>
+              <td class="right"><strong>{{ generatedInvoice.total | number }} TND</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div class="inv-footer-note">
+          Mécanicien : {{ generatedInvoice.mechanicName }} — Merci de votre confiance.
+        </div>
+
+      </div>
+
+      <div class="inv-preview-actions">
+        <button class="btn-cancel" (click)="closeInvoice()">Fermer</button>
+        <button class="btn-save" (click)="printInvoice()">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <polyline points="6 9 6 2 18 2 18 9"/>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+            <rect x="6" y="14" width="12" height="8"/>
+          </svg>
+          Imprimer
+        </button>
+      </div>
+    </ng-container>
+
+  </div>
 </div>

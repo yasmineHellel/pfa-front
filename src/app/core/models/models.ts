@@ -72,6 +72,67 @@ export interface StockItem {
   quantity: number;
   alertThreshold: number;
   status: string;
+  mechanicName?: string;
+  supplierId?: number;
+  supplierName?: string;
+}
+
+export interface OrderItem {
+  pieceId: number;
+  pieceName: string;
+  ref: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface Order {
+  id?: number;
+  supplierId: number;
+  supplierName: string;
+  mechanicName: string;
+  mechanicPhone?: string;
+  items: OrderItem[];
+  totalAmount: number;
+  date: string;
+  status: 'en-attente' | 'en-cours' | 'expediee' | 'livree' | 'annulee';
+}
+
+export interface SupplierPiece {
+  id: number;
+  ref: string;
+  name: string;
+  category: string;
+  categoryColor: string;
+  unitPrice: number;
+  availableQty: number;
+  supplierId: number;
+  supplierName: string;
+  description?: string;
+}
+
+export interface InvoiceLine {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface RepairInvoice {
+  id?: number;
+  invoiceNumber: string;
+  repairId: number;
+  clientName: string;
+  clientPhone: string;
+  vehicleName: string;
+  plate: string;
+  mechanicName: string;
+  repairDescription: string;
+  entryDate: string;
+  invoiceDate: string;
+  lines: InvoiceLine[];
+  totalParts: number;
+  laborDescription: string;
+  laborCost: number;
+  total: number;
 }
 
 export interface Quote {

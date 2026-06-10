@@ -1,0 +1,148 @@
+.users-page { padding: 0; }
+
+/* ── Header ── */
+.page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
+.page-title  { font-size: 22px; font-weight: 700; color: #111827; margin: 0 0 4px; font-family: 'Space Grotesk', sans-serif; }
+.page-sub    { font-size: 13px; color: #6b7280; margin: 0; }
+
+/* ── Stats ── */
+.stat-row { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+
+.stat-card {
+  flex: 1; min-width: 140px;
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+  padding: 16px 18px; display: flex; align-items: center; gap: 14px;
+}
+
+.stat-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+
+.stat-icon.meca   { background: rgba(16,185,129,.12); color: #059669; }
+.stat-icon.four   { background: rgba(59,130,246,.12);  color: #2563eb; }
+.stat-icon.active { background: rgba(245,158,11,.12);  color: #d97706; }
+
+.stat-value { font-size: 22px; font-weight: 700; color: #111827; line-height: 1; }
+.stat-label { font-size: 12px; color: #6b7280; margin-top: 3px; }
+
+/* ── Filter tabs ── */
+.filter-tabs { display: flex; gap: 4px; margin-bottom: 20px; }
+
+.filter-tabs button {
+  padding: 7px 16px; border-radius: 8px; border: 1.5px solid #e5e7eb;
+  background: #fff; font-size: 13px; font-weight: 500; color: #6b7280; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; transition: all .15s;
+}
+
+.filter-tabs button:hover        { border-color: #d1d5db; color: #374151; }
+.filter-tabs button.active       { background: #f59e0b; border-color: #f59e0b; color: #0d1117; font-weight: 600; }
+
+/* ── Table ── */
+.table-card {
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;
+}
+
+table { width: 100%; border-collapse: collapse; }
+
+thead tr { background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+th { padding: 11px 14px; font-size: 11.5px; font-weight: 600; color: #374151; text-align: left; letter-spacing: .4px; text-transform: uppercase; }
+
+tbody tr { border-bottom: 1px solid #f3f4f6; transition: background .1s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: #fafafa; }
+
+td { padding: 12px 14px; font-size: 13.5px; color: #111827; vertical-align: middle; }
+.text-muted { color: #6b7280; }
+
+/* ── User cell ── */
+.user-cell { display: flex; align-items: center; gap: 10px; }
+
+.avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: #f59e0b; color: #0d1117;
+  font-weight: 700; font-size: 13px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+
+.avatar.inactive { background: #e5e7eb; color: #9ca3af; }
+
+.full-name { font-weight: 500; }
+
+/* ── Badges ── */
+.role-badge {
+  display: inline-block; padding: 3px 9px; border-radius: 20px;
+  font-size: 11.5px; font-weight: 600;
+}
+
+.role-badge.meca { background: rgba(16,185,129,.12); color: #059669; }
+.role-badge.four { background: rgba(59,130,246,.12);  color: #2563eb; }
+
+.status-badge {
+  display: inline-block; padding: 3px 9px; border-radius: 20px;
+  font-size: 11.5px; font-weight: 600;
+}
+
+.status-badge.active   { background: rgba(16,185,129,.12); color: #059669; }
+.status-badge.inactive { background: rgba(239,68,68,.10);  color: #dc2626; }
+
+/* ── Action buttons ── */
+.action-btns { display: flex; gap: 6px; }
+
+.btn-toggle, .btn-delete {
+  width: 30px; height: 30px; border-radius: 7px; border: 1.5px solid #e5e7eb;
+  background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .15s; color: #6b7280;
+}
+
+.btn-toggle:hover { border-color: #f59e0b; color: #d97706; background: rgba(245,158,11,.07); }
+.btn-delete:hover { border-color: #ef4444; color: #dc2626; background: rgba(239,68,68,.07); }
+
+/* ── Loading / Error ── */
+.loading-row { padding: 32px; text-align: center; color: #6b7280; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+
+.spinner {
+  width: 18px; height: 18px; border: 2px solid #e5e7eb;
+  border-top-color: #f59e0b; border-radius: 50%;
+  animation: spin .7s linear infinite; display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.api-error {
+  background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.25);
+  color: #dc2626; border-radius: 8px; padding: 12px 16px; font-size: 13px; margin-bottom: 16px;
+}
+
+.empty-row { text-align: center; color: #9ca3af; padding: 32px; font-size: 14px; }
+
+/* ── Delete confirm modal ── */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+
+.confirm-modal {
+  background: #fff; border-radius: 14px; padding: 28px 32px; width: 360px; max-width: 90vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+}
+
+.confirm-modal h3 { font-size: 17px; font-weight: 700; color: #111827; margin: 0 0 10px; }
+.confirm-modal p  { font-size: 13.5px; color: #6b7280; margin: 0 0 22px; }
+
+.modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+
+.btn-cancel {
+  padding: 9px 18px; border: 1.5px solid #e5e7eb; border-radius: 8px;
+  background: #fff; font-size: 13.5px; font-weight: 600; color: #374151;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+}
+
+.btn-cancel:hover { background: #f9fafb; }
+
+.btn-confirm-del {
+  padding: 9px 18px; border: none; border-radius: 8px;
+  background: #ef4444; font-size: 13.5px; font-weight: 600; color: #fff;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+}
+
+.btn-confirm-del:hover { background: #dc2626; }

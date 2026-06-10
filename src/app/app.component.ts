@@ -17,7 +17,8 @@ export class AppComponent implements OnInit {
     this.router.events.pipe(
       filter(e => e instanceof NavigationEnd)
     ).subscribe((e: any) => {
-      this.showLayout = !e.url.startsWith('/login') && this.authService.isLoggedIn();
+      const isPublic = e.url.startsWith('/login') || e.url.startsWith('/register');
+      this.showLayout = !isPublic && this.authService.isLoggedIn();
     });
   }
 }
