@@ -8,7 +8,7 @@ export class JwtInterceptor implements HttpInterceptor {
 
   intercept(req: HttpRequest<any>, next: HttpHandler) {
     const token = this.authService.getToken();
-    if (token && !req.url.includes('/auth/login')) {
+    if (token && !req.url.includes('/auth/login') && !req.url.includes('/auth/register')) {
       req = req.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
     }
     return next.handle(req);

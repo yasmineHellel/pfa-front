@@ -5,9 +5,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
-import { environment } from '../environments/environment';
 
-import { MockInterceptor } from './core/interceptors/mock.interceptor';
 import { JwtInterceptor }  from './core/interceptors/jwt.interceptor';
 
 // Layout
@@ -61,9 +59,6 @@ import { WhatsappComponent }  from './shared/components/whatsapp/whatsapp.compon
   ],
   providers: [
     { provide: HTTP_INTERCEPTORS, useClass: JwtInterceptor, multi: true },
-    ...(!environment.production
-      ? [{ provide: HTTP_INTERCEPTORS, useClass: MockInterceptor, multi: true }]
-      : [])
   ],
   bootstrap: [AppComponent]
 })

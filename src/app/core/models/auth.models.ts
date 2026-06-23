@@ -23,6 +23,16 @@ export interface RegisterRequest {
   company?: string;
 }
 
+export interface BackendAuthResponse {
+  accessToken: string;
+  refreshToken?: string;
+  tokenType?: string;
+  userId: number;
+  username: string;
+  email: string;
+  role: string;
+}
+
 export interface AuthResponse {
   token: string;
   user: User;

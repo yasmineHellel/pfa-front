@@ -2,32 +2,41 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
-import { AuthResponse, LoginRequest, RegisterRequest, User } from '../models/auth.models';
+import { map, tap } from 'rxjs/operators';
+import { AuthResponse, BackendAuthResponse, LoginRequest, RegisterRequest, User } from '../models/auth.models';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly TOKEN_KEY = 'garage_token';
   private readonly USER_KEY  = 'garage_user';
+  private readonly baseUrl   = `${environment.authUrl}/auth`;
 
   constructor(private http: HttpClient, private router: Router) {}
 
   login(credentials: LoginRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${environment.apiUrl}/auth/login`, credentials).pipe(
-      tap(res => {
-        localStorage.setItem(this.TOKEN_KEY, res.token);
-        localStorage.setItem(this.USER_KEY,  JSON.stringify(res.user));
-      })
+    return this.http.post<BackendAuthResponse>(`${this.baseUrl}/login`, {
+      username: credentials.email,
+      password: credentials.password
+    }).pipe(
+      map(res => this.mapResponse(res)),
+      tap(res => this.storeSession(res))
     );
   }
 
   register(data: RegisterRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${environment.apiUrl}/auth/register`, data).pipe(
-      tap(res => {
-        localStorage.setItem(this.TOKEN_KEY, res.token);
-        localStorage.setItem(this.USER_KEY,  JSON.stringify(res.user));
-      })
+    return this.http.post<BackendAuthResponse>(`${this.baseUrl}/register`, {
+      username:  data.email,
+      email:     data.email,
+      password:  data.password,
+      firstName: data.firstName,
+      lastName:  data.lastName,
+      role:      data.role,
+      phone:     data.phone    || '',
+      company:   data.company  || ''
+    }).pipe(
+      map(res => this.mapResponse(res)),
+      tap(res => this.storeSession(res))
     );
   }
 
@@ -59,5 +68,23 @@ export class AuthService {
     if (role === 'MECANICIEN')  return '/repairs';
     if (role === 'FOURNISSEUR') return '/stock';
     return '/dashboard';
+  }
+
+  private mapResponse(res: BackendAuthResponse): AuthResponse {
+    const namePart  = res.username?.split('@')[0] || res.email?.split('@')[0] || 'Utilisateur';
+    const firstName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+    const user: User = {
+      id:        res.userId,
+      firstName,
+      lastName:  '',
+      email:     res.email,
+      role:      res.role as any
+    };
+    return { token: res.accessToken, user };
+  }
+
+  private storeSession(res: AuthResponse): void {
+    localStorage.setItem(this.TOKEN_KEY, res.token);
+    localStorage.setItem(this.USER_KEY,  JSON.stringify(res.user));
   }
 }

@@ -1,36 +1,40 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { Quote } from '../models/models';
-import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class QuoteService {
-  private apiUrl = `${environment.apiUrl}/quotes`;
-
-  constructor(private http: HttpClient) {}
+  private quotes: Quote[] = [];
+  private nextId = 1;
 
   getAll(): Observable<Quote[]> {
-    return this.http.get<Quote[]>(this.apiUrl);
+    return of([...this.quotes]);
   }
 
   getById(id: number): Observable<Quote> {
-    return this.http.get<Quote>(`${this.apiUrl}/${id}`);
+    return of(this.quotes.find(q => q.id === id)!);
   }
 
   create(quote: Partial<Quote>): Observable<Quote> {
-    return this.http.post<Quote>(this.apiUrl, quote);
+    const created: Quote = { ...(quote as Quote), id: this.nextId++, status: 'en-attente' };
+    this.quotes.unshift(created);
+    return of(created);
   }
 
   update(id: number, quote: Partial<Quote>): Observable<Quote> {
-    return this.http.put<Quote>(`${this.apiUrl}/${id}`, quote);
+    const idx = this.quotes.findIndex(q => q.id === id);
+    if (idx !== -1) this.quotes[idx] = { ...this.quotes[idx], ...quote };
+    return of(this.quotes[idx]);
   }
 
   delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+    this.quotes = this.quotes.filter(q => q.id !== id);
+    return of(void 0);
   }
 
   convert(id: number): Observable<any> {
-    return this.http.post(`${this.apiUrl}/${id}/convert`, {});
+    const quote = this.quotes.find(q => q.id === id);
+    if (quote) quote.status = 'accepte';
+    return of({ message: 'Converti en facture.' });
   }
 }
