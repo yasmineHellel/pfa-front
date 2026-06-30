@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Vehicle } from '../models/models';
@@ -26,9 +26,8 @@ export class VehicleService {
   }
 
   create(vehicle: Partial<Vehicle>): Observable<Vehicle> {
-    const headers = new HttpHeaders({ 'X-User-Id': String(vehicle.clientId || 0) });
     const body = this.mapToCreateRequest(vehicle);
-    return this.http.post<any>(this.apiUrl, body, { headers }).pipe(map(v => this.mapVehicle(v)));
+    return this.http.post<any>(this.apiUrl, body).pipe(map(v => this.mapVehicle(v)));
   }
 
   update(id: number, vehicle: Partial<Vehicle>): Observable<Vehicle> {
@@ -41,6 +40,9 @@ export class VehicleService {
   }
 
   private mapVehicle(v: any): Vehicle {
+    const clientName = (v.clientFirstName || v.clientLastName)
+      ? `${v.clientFirstName ?? ''} ${v.clientLastName ?? ''}`.trim()
+      : (v.clientName ?? '');
     return {
       id:          v.id,
       plate:       v.licensePlate ?? v.plate ?? '',
@@ -48,8 +50,8 @@ export class VehicleService {
       model:       v.model ?? '',
       engine:      v.notes ?? v.engine ?? '',
       year:        v.year ?? new Date().getFullYear(),
-      clientId:    v.ownerId ?? v.clientId ?? 0,
-      clientName:  v.ownerUsername ?? v.clientName ?? '',
+      clientId:    v.clientId ?? 0,
+      clientName,
       mileage:     v.mileage ?? 0,
       repairCount: v.repairCount ?? 0,
     };
@@ -65,7 +67,7 @@ export class VehicleService {
       color:        '',
       vin:          '',
       notes:        v.engine ?? '',
-      ownerId:      v.clientId ?? null,
+      clientId:     v.clientId ?? null,
     };
   }
 

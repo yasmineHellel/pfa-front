@@ -77,13 +77,10 @@ export class RepairService {
       color:        '',
       vin:          '',
       notes:        '',
-      ownerId:      repair.clientId ?? null,
+      clientId:     repair.clientId ?? null,
     };
-    const headers: Record<string, string> = repair.clientId
-      ? { 'X-User-Id': String(repair.clientId) }
-      : {};
 
-    return this.http.post<any>(this.vehiclesUrl, vehicleBody, { headers }).pipe(
+    return this.http.post<any>(this.vehiclesUrl, vehicleBody).pipe(
       switchMap(vehicle => this.createServiceRecord(vehicle.id, { ...repair, vehicleId: vehicle.id }))
     );
   }
@@ -93,7 +90,7 @@ export class RepairService {
     const body = this.mapToUpdateRequest(repair);
     return this.http.put<any>(`${this.vehiclesUrl}/${vehicleId}/services/${id}`, body).pipe(
       map(r => ({
-        ...this.mapRepair(r, { id: vehicleId, licensePlate: repair.plate, ownerId: repair.clientId }),
+        ...this.mapRepair(r, { id: vehicleId, licensePlate: repair.plate, clientId: repair.clientId }),
         clientName:  repair.clientName,
         clientPhone: repair.clientPhone,
         vehicleName: repair.vehicleName,
@@ -144,15 +141,15 @@ export class RepairService {
       cost:             repair.cost ?? 0,
       notes:            '',
       licensePlate:     repair.plate ?? '',
-      ownerId:          repair.clientId ?? null,
-      ownerFirstName:   nameParts[0] ?? '',
-      ownerLastName:    nameParts.slice(1).join(' ') ?? '',
-      ownerEmail:       '',
-      ownerPhone:       repair.clientPhone ?? '',
+      clientId:         repair.clientId ?? null,
+      clientFirstName:  nameParts[0] ?? '',
+      clientLastName:   nameParts.slice(1).join(' ') ?? '',
+      clientEmail:      '',
+      clientPhone:      repair.clientPhone ?? '',
     };
     return this.http.post<any>(`${this.vehiclesUrl}/${vehicleId}/services`, body).pipe(
       map(r => ({
-        ...this.mapRepair(r, { id: vehicleId, licensePlate: repair.plate, ownerId: repair.clientId }),
+        ...this.mapRepair(r, { id: vehicleId, licensePlate: repair.plate, clientId: repair.clientId }),
         clientName:  repair.clientName  ?? '',
         clientPhone: repair.clientPhone ?? '',
         vehicleName: repair.vehicleName ?? '',
@@ -165,10 +162,13 @@ export class RepairService {
     const vehicleName = (vehicle.make && vehicle.model)
       ? `${vehicle.make} ${vehicle.model}`
       : (vehicle.licensePlate ?? '');
+    const vehicleClientName = (vehicle.clientFirstName || vehicle.clientLastName)
+      ? `${vehicle.clientFirstName ?? ''} ${vehicle.clientLastName ?? ''}`.trim()
+      : (vehicle.clientName ?? '');
     return {
       id:           r.id,
-      clientId:     vehicle.ownerId       ?? r.clientId    ?? 0,
-      clientName:   vehicle.ownerUsername ?? r.clientName  ?? '',
+      clientId:     vehicle.clientId   ?? r.clientId    ?? 0,
+      clientName:   vehicleClientName  || r.clientName  || '',
       clientPhone:  r.clientPhone         ?? '',
       vehicleId:    r.vehicleId           ?? vehicle.id    ?? 0,
       vehicleName,
