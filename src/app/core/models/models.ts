@@ -50,6 +50,9 @@ export interface Repair {
   clientPhone: string;
   vehicleId: number;
   vehicleName: string;
+  vehicleMake?: string;
+  vehicleModel?: string;
+  vehicleYear?: number;
   plate: string;
   description: string;
   mechanicName: string;

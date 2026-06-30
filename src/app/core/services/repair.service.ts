@@ -70,9 +70,9 @@ export class RepairService {
     const nameParts = (repair.vehicleName || '').split(' ');
     const vehicleBody = {
       licensePlate: repair.plate || '',
-      make:         nameParts[0] || '',
-      model:        nameParts.slice(1).join(' ') || '',
-      year:         new Date().getFullYear(),
+      make:         repair.vehicleMake  || nameParts[0] || '',
+      model:        repair.vehicleModel || nameParts.slice(1).join(' ') || '',
+      year:         repair.vehicleYear  || new Date().getFullYear(),
       mileage:      0,
       color:        '',
       vin:          '',
