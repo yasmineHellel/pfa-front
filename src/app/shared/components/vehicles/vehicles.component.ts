@@ -25,19 +25,25 @@ export class VehiclesComponent implements OnInit {
 
   confirmDeleteId: number | null = null;
 
+  createNewClient = false;
+
   constructor(
     private vehicleService: VehicleService,
     private clientService:  ClientService,
     private fb: FormBuilder
   ) {
     this.form = this.fb.group({
-      plate:    ['', Validators.required],
-      brand:    ['', Validators.required],
-      model:    ['', Validators.required],
-      engine:   [''],
-      year:     ['', [Validators.required, Validators.min(1900)]],
-      mileage:  [0,  Validators.required],
-      clientId: ['', Validators.required],
+      plate:           ['', Validators.required],
+      brand:           ['', Validators.required],
+      model:           ['', Validators.required],
+      engine:          [''],
+      year:            ['', [Validators.required, Validators.min(1900)]],
+      mileage:         [0,  Validators.required],
+      clientId:        [''],
+      clientFirstName: [''],
+      clientLastName:  [''],
+      clientPhone:     [''],
+      clientEmail:     ['', Validators.email],
     });
   }
 
@@ -58,10 +64,35 @@ export class VehiclesComponent implements OnInit {
     );
   }
 
+  toggleCreateNewClient(): void {
+    this.createNewClient = !this.createNewClient;
+    if (this.createNewClient) {
+      this.form.get('clientId')!.clearValidators();
+      this.form.get('clientFirstName')!.setValidators(Validators.required);
+      this.form.get('clientLastName')!.setValidators(Validators.required);
+      this.form.get('clientPhone')!.setValidators(Validators.required);
+      this.form.get('clientEmail')!.setValidators([Validators.required, Validators.email]);
+    } else {
+      this.form.get('clientId')!.setValidators(Validators.required);
+      this.form.get('clientFirstName')!.clearValidators();
+      this.form.get('clientLastName')!.clearValidators();
+      this.form.get('clientPhone')!.clearValidators();
+      this.form.get('clientEmail')!.setValidators(Validators.email);
+    }
+    ['clientId', 'clientFirstName', 'clientLastName', 'clientPhone', 'clientEmail']
+      .forEach(k => this.form.get(k)!.updateValueAndValidity());
+  }
+
   openCreate(): void {
     this.modalMode = 'create';
     this.editingVehicle = null;
+    this.createNewClient = false;
     this.form.reset({ mileage: 0 });
+    this.form.get('clientId')!.setValidators(Validators.required);
+    ['clientFirstName', 'clientLastName', 'clientPhone'].forEach(k => this.form.get(k)!.clearValidators());
+    this.form.get('clientEmail')!.setValidators(Validators.email);
+    ['clientId', 'clientFirstName', 'clientLastName', 'clientPhone', 'clientEmail']
+      .forEach(k => this.form.get(k)!.updateValueAndValidity());
     this.formError = '';
     this.showModal = true;
   }
@@ -74,13 +105,38 @@ export class VehiclesComponent implements OnInit {
     this.showModal = true;
   }
 
-  closeModal(): void { this.showModal = false; }
+  closeModal(): void { this.showModal = false; this.createNewClient = false; }
 
   submit(): void {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     this.submitting = true;
     this.formError  = '';
     const data = this.form.value;
+
+    if (this.modalMode === 'create' && this.createNewClient) {
+      const clientPayload = {
+        firstName: data.clientFirstName,
+        lastName:  data.clientLastName,
+        phone:     data.clientPhone,
+        email:     data.clientEmail,
+      };
+      this.clientService.create(clientPayload).subscribe({
+        next: newClient => {
+          this.clients.push(newClient);
+          this.vehicleService.create({ ...data, clientId: newClient.id }).subscribe({
+            next: created => {
+              this.vehicles.unshift(created);
+              this.filtered = [...this.vehicles];
+              this.submitting = false; this.showModal = false;
+            },
+            error: () => { this.formError = 'Erreur lors de la création du véhicule.'; this.submitting = false; }
+          });
+        },
+        error: () => { this.formError = 'Erreur lors de la création du client.'; this.submitting = false; }
+      });
+      return;
+    }
+
     if (this.modalMode === 'create') {
       this.vehicleService.create(data).subscribe({
         next: created => {

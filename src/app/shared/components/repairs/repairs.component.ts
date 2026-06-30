@@ -175,6 +175,7 @@ export class RepairsComponent implements OnInit {
       clientFirstName: [''],
       clientLastName:  [''],
       clientPhone:     [''],
+      clientEmail:     ['', Validators.email],
       vehicleId:       [''],
       vehiclePlate:    [''],
       vehicleBrand:    [''],
@@ -215,7 +216,7 @@ export class RepairsComponent implements OnInit {
     this.vehiclesForClient = [];
     this.form.get('clientId')!.setValue('');
     this.form.get('vehicleId')!.setValue('');
-    ['clientFirstName','clientLastName','vehiclePlate','vehicleBrand','vehicleModel'].forEach(f =>
+    ['clientFirstName','clientLastName','clientPhone','clientEmail','vehiclePlate','vehicleBrand','vehicleModel'].forEach(f =>
       this.form.get(f)!.setValue('')
     );
   }
@@ -244,18 +245,28 @@ export class RepairsComponent implements OnInit {
     this.formError  = '';
     const v = this.form.value;
 
-    let clientId = 0, clientName = '', clientPhone = '';
-    let vehicleId = 0, vehicleName = '', plate = '';
-
-    if (this.clientMode === 'existing') {
-      const client = this.clients.find(c => c.id === +v.clientId);
-      clientId    = +v.clientId;
-      clientName  = client ? `${client.firstName} ${client.lastName}` : '';
-      clientPhone = client?.phone ?? '';
-    } else {
-      clientName  = `${v.clientFirstName} ${v.clientLastName}`;
-      clientPhone = v.clientPhone;
+    if (this.clientMode === 'new') {
+      this.clientService.create({
+        firstName: v.clientFirstName,
+        lastName:  v.clientLastName,
+        phone:     v.clientPhone,
+        email:     v.clientEmail,
+      }).subscribe({
+        next: newClient => {
+          this.clients.push(newClient);
+          this.doCreateRepair(newClient.id, `${newClient.firstName} ${newClient.lastName}`, newClient.phone, v);
+        },
+        error: () => { this.formError = 'Erreur lors de la création du client.'; this.submitting = false; }
+      });
+      return;
     }
+
+    const client = this.clients.find(c => c.id === +v.clientId);
+    this.doCreateRepair(+v.clientId, client ? `${client.firstName} ${client.lastName}` : '', client?.phone ?? '', v);
+  }
+
+  private doCreateRepair(clientId: number, clientName: string, clientPhone: string, v: any): void {
+    let vehicleId = 0, vehicleName = '', plate = '';
 
     if (this.clientMode === 'existing' && this.vehicleMode === 'existing') {
       const vehicle = this.vehiclesForClient.find(x => x.id === +v.vehicleId);

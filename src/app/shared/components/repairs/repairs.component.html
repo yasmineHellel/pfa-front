@@ -401,9 +401,16 @@
               <input type="text" formControlName="clientLastName" placeholder="Nom du client">
             </div>
           </div>
-          <div class="field">
-            <label>Téléphone</label>
-            <input type="text" formControlName="clientPhone" placeholder="+216 XX XXX XXX">
+          <div class="form-row">
+            <div class="field">
+              <label>Téléphone</label>
+              <input type="text" formControlName="clientPhone" placeholder="+216 XX XXX XXX">
+            </div>
+            <div class="field">
+              <label>Email</label>
+              <input type="email" formControlName="clientEmail" placeholder="email@exemple.com">
+              <span class="err-msg" *ngIf="invalid('clientEmail')">Email invalide</span>
+            </div>
           </div>
         </div>
       </div>
