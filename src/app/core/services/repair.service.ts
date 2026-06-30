@@ -1,99 +1,183 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, of, forkJoin } from 'rxjs';
+import { map, switchMap, catchError } from 'rxjs/operators';
 import { Repair, RepairInvoice } from '../models/models';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class RepairService {
-  private apiUrl = `${environment.vehicleUrl}/repairs`;
+  private readonly vehiclesUrl = `${environment.vehicleUrl}/vehicles`;
 
   constructor(private http: HttpClient) {}
 
+  /** Fetches all vehicles then aggregates their service records. */
   getAll(): Observable<Repair[]> {
-    return this.http.get<any[]>(this.apiUrl).pipe(map(list => list.map(r => this.mapRepair(r))));
+    return this.http.get<any[]>(this.vehiclesUrl).pipe(
+      switchMap(vehicles => {
+        if (!vehicles || vehicles.length === 0) return of([]);
+        return forkJoin(
+          vehicles.map(v =>
+            this.http.get<any[]>(`${this.vehiclesUrl}/${v.id}/services`).pipe(
+              map(records => records.map(r => this.mapRepair(r, v))),
+              catchError(() => of([] as Repair[]))
+            )
+          )
+        ).pipe(map(groups => ([] as Repair[]).concat(...groups)));
+      }),
+      catchError(() => of([]))
+    );
   }
 
   getById(id: number): Observable<Repair> {
-    return this.http.get<any>(`${this.apiUrl}/${id}`).pipe(map(r => this.mapRepair(r)));
+    return this.getAll().pipe(map(repairs => repairs.find(r => r.id === id)!));
   }
 
   getByClient(clientId: number): Observable<Repair[]> {
-    return this.http.get<any[]>(`${this.apiUrl}?clientId=${clientId}`).pipe(
-      map(list => list.map(r => this.mapRepair(r)))
+    return this.http.get<any[]>(`${this.vehiclesUrl}/owner/${clientId}`).pipe(
+      switchMap(vehicles => {
+        if (!vehicles || vehicles.length === 0) return of([]);
+        return forkJoin(
+          vehicles.map(v =>
+            this.http.get<any[]>(`${this.vehiclesUrl}/${v.id}/services`).pipe(
+              map(records => records.map(r => this.mapRepair(r, v))),
+              catchError(() => of([] as Repair[]))
+            )
+          )
+        ).pipe(map(groups => ([] as Repair[]).concat(...groups)));
+      }),
+      catchError(() => of([]))
     );
   }
 
   getByVehicle(vehicleId: number): Observable<Repair[]> {
-    return this.http.get<any[]>(`${this.apiUrl}?vehicleId=${vehicleId}`).pipe(
-      map(list => list.map(r => this.mapRepair(r)))
+    return forkJoin({
+      vehicle: this.http.get<any>(`${this.vehiclesUrl}/${vehicleId}`).pipe(catchError(() => of({}))),
+      records: this.http.get<any[]>(`${this.vehiclesUrl}/${vehicleId}/services`).pipe(catchError(() => of([]))),
+    }).pipe(
+      map(({ vehicle, records }) => records.map(r => this.mapRepair(r, vehicle)))
     );
   }
 
   create(repair: Partial<Repair>): Observable<Repair> {
-    const body = this.mapToCreateRequest(repair);
-    return this.http.post<any>(`${this.apiUrl}?vehicleId=${repair.vehicleId || 0}`, body).pipe(
-      map(r => this.mapRepair(r))
+    const vehicleId = repair.vehicleId || 0;
+
+    if (vehicleId > 0) {
+      return this.createServiceRecord(vehicleId, repair);
+    }
+
+    // New vehicle — create it first then attach the service record
+    const nameParts = (repair.vehicleName || '').split(' ');
+    const vehicleBody = {
+      licensePlate: repair.plate || '',
+      make:         nameParts[0] || '',
+      model:        nameParts.slice(1).join(' ') || '',
+      year:         new Date().getFullYear(),
+      mileage:      0,
+      color:        '',
+      vin:          '',
+      notes:        '',
+    };
+    const headers: Record<string, string> = repair.clientId
+      ? { 'X-User-Id': String(repair.clientId) }
+      : {};
+
+    return this.http.post<any>(this.vehiclesUrl, vehicleBody, { headers }).pipe(
+      switchMap(vehicle => this.createServiceRecord(vehicle.id, { ...repair, vehicleId: vehicle.id }))
     );
   }
 
   update(id: number, repair: Partial<Repair>): Observable<Repair> {
-    const body = this.mapToUpdateRequest(repair);
     const vehicleId = repair.vehicleId || 0;
-    return this.http.put<any>(`${this.apiUrl}/${id}?vehicleId=${vehicleId}`, body).pipe(
-      map(r => this.mapRepair(r))
+    const body = this.mapToUpdateRequest(repair);
+    return this.http.put<any>(`${this.vehiclesUrl}/${vehicleId}/services/${id}`, body).pipe(
+      map(r => ({
+        ...this.mapRepair(r, { id: vehicleId, licensePlate: repair.plate, ownerId: repair.clientId }),
+        clientName:  repair.clientName,
+        clientPhone: repair.clientPhone,
+        vehicleName: repair.vehicleName,
+        plate:       repair.plate,
+      } as Repair))
     );
   }
 
-  delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  delete(id: number, vehicleId: number): Observable<void> {
+    return this.http.delete<void>(`${this.vehiclesUrl}/${vehicleId}/services/${id}`);
   }
 
-  // No backend endpoint for repair invoices — kept for interface compatibility
+  /** No invoice backend — generates a local printable invoice only. */
   createInvoice(invoice: Omit<RepairInvoice, 'id' | 'invoiceNumber'>): Observable<RepairInvoice> {
     return of({
       ...invoice,
-      id: Date.now(),
+      id:            Date.now(),
       invoiceNumber: `F-${String(Date.now()).slice(-4)}`,
     } as RepairInvoice);
   }
 
-  // Parts management not available in backend — no-op stubs
-  addPart(_repairId: number, _stockItemId: number, _quantity: number): Observable<Repair> {
-    return of(null as any);
+  /** Reserves stock items for a repair via stock service. */
+  addPart(repairId: number, stockItemId: number, quantity: number, vehicleId = 0): Observable<Repair> {
+    return this.http.post<any>(
+      `${environment.stockUrl}/stock/${stockItemId}/reserve`,
+      null,
+      { params: { quantity: String(quantity), serviceRecordId: String(repairId), vehicleId: String(vehicleId) } }
+    ).pipe(
+      switchMap(() => this.getById(repairId)),
+      catchError(() => of(null as any))
+    );
   }
 
   removePart(_repairId: number, _stockItemId: number): Observable<Repair> {
     return of(null as any);
   }
 
-  private mapRepair(r: any): Repair {
-    return {
-      id:          r.id,
-      clientId:    r.clientId    ?? 0,
-      clientName:  r.clientName  ?? '',
-      clientPhone: r.clientPhone ?? '',
-      vehicleId:   r.vehicleId   ?? 0,
-      vehicleName: r.vehicleLicensePlate ?? r.vehicleName ?? '',
-      plate:       r.vehicleLicensePlate ?? r.plate ?? '',
-      description: r.description ?? '',
-      mechanicName: r.mechanicUsername ?? r.mechanicName ?? '',
-      status:      this.mapStatusToFrontend(r.serviceStatus ?? r.status),
-      cost:        typeof r.cost === 'string' ? parseFloat(r.cost) : (r.cost ?? 0),
-      entryDate:   r.serviceDate ?? r.entryDate ?? '',
-      usedParts:   r.usedParts ?? [],
+  // ── Private helpers ───────────────────────────────────────────────────────
+
+  private createServiceRecord(vehicleId: number, repair: Partial<Repair>): Observable<Repair> {
+    const nameParts = (repair.clientName || '').split(' ');
+    const body = {
+      description:      repair.description ?? '',
+      serviceType:      'OTHER',
+      serviceDate:      this.toIsoDate(repair.entryDate || ''),
+      scheduledDate:    this.toIsoDate(repair.entryDate || ''),
+      mileageAtService: 0,
+      cost:             repair.cost ?? 0,
+      notes:            '',
+      licensePlate:     repair.plate ?? '',
+      ownerId:          repair.clientId ?? null,
+      ownerFirstName:   nameParts[0] ?? '',
+      ownerLastName:    nameParts.slice(1).join(' ') ?? '',
+      ownerEmail:       '',
+      ownerPhone:       repair.clientPhone ?? '',
     };
+    return this.http.post<any>(`${this.vehiclesUrl}/${vehicleId}/services`, body).pipe(
+      map(r => ({
+        ...this.mapRepair(r, { id: vehicleId, licensePlate: repair.plate, ownerId: repair.clientId }),
+        clientName:  repair.clientName  ?? '',
+        clientPhone: repair.clientPhone ?? '',
+        vehicleName: repair.vehicleName ?? '',
+        plate:       repair.plate       ?? '',
+      } as Repair))
+    );
   }
 
-  private mapToCreateRequest(r: Partial<Repair>): any {
+  private mapRepair(r: any, vehicle: any = {}): Repair {
+    const vehicleName = (vehicle.make && vehicle.model)
+      ? `${vehicle.make} ${vehicle.model}`
+      : (vehicle.licensePlate ?? '');
     return {
-      description:      r.description ?? '',
-      serviceType:      'OTHER',
-      serviceDate:      new Date().toISOString().split('T')[0],
-      cost:             r.cost ?? 0,
-      mileageAtService: 0,
-      notes:            '',
+      id:           r.id,
+      clientId:     vehicle.ownerId       ?? r.clientId    ?? 0,
+      clientName:   vehicle.ownerUsername ?? r.clientName  ?? '',
+      clientPhone:  r.clientPhone         ?? '',
+      vehicleId:    r.vehicleId           ?? vehicle.id    ?? 0,
+      vehicleName,
+      plate:        r.vehicleLicensePlate ?? vehicle.licensePlate ?? '',
+      description:  r.description         ?? '',
+      mechanicName: r.mechanicUsername    ?? r.mechanicName ?? '',
+      status:       this.mapStatusToFrontend(r.serviceStatus ?? r.status),
+      cost:         typeof r.cost === 'string' ? parseFloat(r.cost) : (r.cost ?? 0),
+      entryDate:    r.serviceDate         ?? r.entryDate   ?? '',
+      usedParts:    r.usedParts           ?? [],
     };
   }
 
@@ -102,27 +186,36 @@ export class RepairService {
     if (r.description !== undefined) req.description   = r.description;
     if (r.cost        !== undefined) req.cost          = r.cost;
     if (r.status      !== undefined) req.serviceStatus = this.mapStatusToBackend(r.status);
+    if (r.status === 'termine')      req.completedDate = new Date().toISOString().split('T')[0];
     return req;
   }
 
   private mapStatusToFrontend(s: string): string {
-    const map: Record<string, string> = {
+    const m: Record<string, string> = {
       SCHEDULED:      'en-attente',
       IN_PROGRESS:    'en-cours',
       AWAITING_PARTS: 'diagnostic',
       COMPLETED:      'termine',
       CANCELLED:      'en-attente',
     };
-    return map[s] ?? s ?? 'en-attente';
+    return m[s] ?? s ?? 'en-attente';
   }
 
   private mapStatusToBackend(s: string): string {
-    const map: Record<string, string> = {
+    const m: Record<string, string> = {
       'en-attente': 'SCHEDULED',
       'en-cours':   'IN_PROGRESS',
       'diagnostic': 'AWAITING_PARTS',
       'termine':    'COMPLETED',
     };
-    return map[s] ?? 'SCHEDULED';
+    return m[s] ?? 'SCHEDULED';
+  }
+
+  /** Converts DD/MM/YYYY or any string to YYYY-MM-DD; falls back to today. */
+  private toIsoDate(date: string): string {
+    if (!date) return new Date().toISOString().split('T')[0];
+    const parts = date.split('/');
+    if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    return date;
   }
 }

@@ -35,7 +35,16 @@ export class AuthService {
       phone:     data.phone    || '',
       company:   data.company  || ''
     }).pipe(
-      map(res => this.mapResponse(res)),
+      map(res => ({
+        token: res.accessToken,
+        user: {
+          id:        res.userId,
+          firstName: data.firstName,
+          lastName:  data.lastName,
+          email:     res.email,
+          role:      res.role as any,
+        },
+      })),
       tap(res => this.storeSession(res))
     );
   }

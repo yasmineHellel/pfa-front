@@ -38,9 +38,9 @@ export class RepairsComponent implements OnInit {
 
   doDelete(): void {
     if (!this.repairToDelete) return;
-    const id = this.repairToDelete.id;
+    const { id, vehicleId } = this.repairToDelete;
     this.deleting = true;
-    this.repairService.delete(id).subscribe({
+    this.repairService.delete(id, vehicleId).subscribe({
       next: () => {
         this.repairs = this.repairs.filter(r => r.id !== id);
         this.applyFilter();
