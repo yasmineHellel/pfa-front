@@ -65,6 +65,7 @@ export class VehicleService {
       color:        '',
       vin:          '',
       notes:        v.engine ?? '',
+      ownerId:      v.clientId ?? null,
     };
   }
 

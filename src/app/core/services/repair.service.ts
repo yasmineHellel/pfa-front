@@ -77,6 +77,7 @@ export class RepairService {
       color:        '',
       vin:          '',
       notes:        '',
+      ownerId:      repair.clientId ?? null,
     };
     const headers: Record<string, string> = repair.clientId
       ? { 'X-User-Id': String(repair.clientId) }
