@@ -29,6 +29,7 @@ import { InvoicesComponent }  from './shared/components/invoices/invoices.compon
 import { StockComponent }     from './shared/components/stock/stock.component';
 import { PlanningComponent }  from './shared/components/planning/planning.component';
 import { WhatsappComponent }  from './shared/components/whatsapp/whatsapp.component';
+import { ChatbotComponent }   from './shared/components/chatbot/chatbot.component';
 
 @NgModule({
   declarations: [
@@ -49,6 +50,7 @@ import { WhatsappComponent }  from './shared/components/whatsapp/whatsapp.compon
     StockComponent,
     PlanningComponent,
     WhatsappComponent,
+    ChatbotComponent,
   ],
   imports: [
     BrowserModule,

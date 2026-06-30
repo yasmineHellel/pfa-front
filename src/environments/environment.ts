@@ -3,5 +3,6 @@ export const environment = {
   authUrl:    'http://localhost:8081/api',
   vehicleUrl: 'http://localhost:8082/api',
   stockUrl:   'http://localhost:8083/api',
+  invoiceUrl: 'http://localhost:8084/api',
   apiUrl:     'http://localhost:8081/api'
 };

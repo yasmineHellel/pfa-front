@@ -107,9 +107,11 @@ export class RepairsComponent implements OnInit {
     this.repairService.getAll().subscribe({
       next: data => {
         if (this.isMecanicien) {
-          const u      = this.authService.getCurrentUser()!;
-          const myName = `${u.firstName} ${u.lastName}`;
-          this.repairs = data.filter(r => r.mechanicName === myName);
+          const u = this.authService.getCurrentUser()!;
+          this.repairs = data.filter(r =>
+            r.mechanicName === u.email ||
+            r.mechanicName === `${u.firstName} ${u.lastName}`.trim()
+          );
         } else {
           this.repairs = data;
         }
@@ -378,12 +380,10 @@ export class RepairsComponent implements OnInit {
   closeParts(): void { this.showPartsModal = false; this.partsRepair = null; }
 
   private loadMechStock(): void {
-    const u  = this.authService.getCurrentUser()!;
-    const me = `${u.firstName} ${u.lastName}`;
     this.stockLoading = true;
     this.stockService.getAll().subscribe({
       next: data => {
-        this.stockItems = data.filter(s => s.mechanicName === me && s.quantity > 0);
+        this.stockItems = data.filter(s => s.quantity > 0);
         this.stockItems.forEach(s => { if (!this.itemQtyMap[s.id]) this.itemQtyMap[s.id] = 1; });
         this.stockLoading = false;
       },
@@ -484,6 +484,8 @@ export class RepairsComponent implements OnInit {
 
     this.repairService.createInvoice({
       repairId:          r.id,
+      clientId:          r.clientId,
+      vehicleId:         r.vehicleId,
       clientName:        r.clientName,
       clientPhone:       r.clientPhone,
       vehicleName:       r.vehicleName,

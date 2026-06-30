@@ -64,14 +64,28 @@ export interface Repair {
 
 export interface Invoice {
   id: number;
+  invoiceNumber?: string;
   clientId: number;
   clientName: string;
+  clientPhone?: string;
+  vehicleId?: number;
+  vehicleName?: string;
+  licensePlate?: string;
+  serviceRecordId?: number;
+  mechanicName?: string;
+  description?: string;
   date: string;
+  invoiceDate?: string;
+  entryDate?: string;
+  laborDescription?: string;
+  laborCost?: number;
+  totalParts?: number;
   amount: number;
   paid: number;
   remaining: number;
   status: string;
   paymentMethod: string;
+  lines?: InvoiceLine[];
 }
 
 export interface StockItem {
@@ -132,6 +146,8 @@ export interface RepairInvoice {
   id?: number;
   invoiceNumber: string;
   repairId: number;
+  clientId?: number;
+  vehicleId?: number;
   clientName: string;
   clientPhone: string;
   vehicleName: string;

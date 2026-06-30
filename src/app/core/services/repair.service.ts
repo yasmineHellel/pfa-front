@@ -103,13 +103,37 @@ export class RepairService {
     return this.http.delete<void>(`${this.vehiclesUrl}/${vehicleId}/services/${id}`);
   }
 
-  /** No invoice backend — generates a local printable invoice only. */
   createInvoice(invoice: Omit<RepairInvoice, 'id' | 'invoiceNumber'>): Observable<RepairInvoice> {
-    return of({
-      ...invoice,
-      id:            Date.now(),
-      invoiceNumber: `F-${String(Date.now()).slice(-4)}`,
-    } as RepairInvoice);
+    const body = {
+      clientId:         invoice.clientId,
+      clientName:       invoice.clientName,
+      clientPhone:      invoice.clientPhone,
+      vehicleId:        invoice.vehicleId,
+      vehicleName:      invoice.vehicleName,
+      licensePlate:     invoice.plate,
+      serviceRecordId:  invoice.repairId,
+      mechanicName:     invoice.mechanicName,
+      description:      invoice.repairDescription,
+      entryDate:        this.toIsoDate(invoice.entryDate),
+      invoiceDate:      this.toIsoDate(invoice.invoiceDate),
+      laborDescription: invoice.laborDescription,
+      laborCost:        invoice.laborCost,
+      lines: invoice.lines.map(l => ({
+        name: l.description, ref: '', quantity: l.quantity, unitPrice: l.unitPrice,
+      })),
+    };
+    return this.http.post<any>(`${environment.invoiceUrl}/invoices`, body).pipe(
+      map(r => ({
+        ...invoice,
+        id:            r.id,
+        invoiceNumber: r.invoiceNumber || `F-${r.id}`,
+      } as RepairInvoice)),
+      catchError(() => of({
+        ...invoice,
+        id:            Date.now(),
+        invoiceNumber: `F-${String(Date.now()).slice(-4)}`,
+      } as RepairInvoice))
+    );
   }
 
   /** Reserves stock items for a repair via stock service. */
