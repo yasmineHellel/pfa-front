@@ -440,58 +440,66 @@
         Aucune pièce trouvée.
       </div>
 
-      <div class="piece-grid">
-        <div class="piece-card" *ngFor="let p of filteredCatalog" [class.selected]="qtyFor(p.id) > 0">
-
-          <!-- Image / icône catégorie -->
-          <div class="piece-img" [style.background]="getCategoryStyle(p.category).bg">
-            <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"
-                 [style.color]="getCategoryStyle(p.category).color">
-              <path [attr.d]="getCategoryStyle(p.category).svg"/>
+      <!-- Groupé par catégorie -->
+      <ng-container *ngFor="let group of catalogGrouped">
+        <div class="cat-group-header">
+          <div class="cat-group-icon" [style.background]="getCategoryStyle(group.category).bg">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"
+                 [style.color]="getCategoryStyle(group.category).color">
+              <path [attr.d]="getCategoryStyle(group.category).svg"/>
             </svg>
           </div>
-
-          <!-- Infos -->
-          <div class="piece-info">
-            <div class="piece-name">{{ p.name }}</div>
-            <div class="piece-ref">{{ p.ref }}</div>
-            <div class="piece-meta">
-              <span class="badge" [ngClass]="'badge-' + p.categoryColor">{{ p.category }}</span>
-              <span class="piece-stock">
-                <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/></svg>
-                {{ p.availableQty }} en stock
-              </span>
-            </div>
-            <div class="piece-desc" *ngIf="p.description">{{ p.description }}</div>
-          </div>
-
-          <!-- Prix + action -->
-          <div class="piece-footer">
-            <div class="piece-price">{{ p.unitPrice | number }} TND</div>
-
-            <!-- Pas encore ajouté -->
-            <button class="btn-add-piece" *ngIf="qtyFor(p.id) === 0" (click)="addPiece(p)">
-              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-              Commander
-            </button>
-
-            <!-- Sélectionné avec qty -->
-            <div class="qty-ctrl" *ngIf="qtyFor(p.id) > 0">
-              <button class="qty-btn" (click)="changeQty(p.id, -1)">−</button>
-              <span class="qty-val">{{ qtyFor(p.id) }}</span>
-              <button class="qty-btn" (click)="changeQty(p.id, +1)">+</button>
-              <button class="qty-remove" (click)="removePiece(p.id)" title="Retirer">
-                <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-
+          <span>{{ group.category }}</span>
+          <span class="cat-group-count">{{ group.pieces.length }} pièce{{ group.pieces.length !== 1 ? 's' : '' }}</span>
         </div>
-      </div>
+
+        <div class="piece-grid">
+          <div class="piece-card" *ngFor="let p of group.pieces" [class.selected]="qtyFor(p.id) > 0">
+
+            <div class="piece-img" [style.background]="getCategoryStyle(p.category).bg">
+              <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"
+                   [style.color]="getCategoryStyle(p.category).color">
+                <path [attr.d]="getCategoryStyle(p.category).svg"/>
+              </svg>
+            </div>
+
+            <div class="piece-info">
+              <div class="piece-name">{{ p.name }}</div>
+              <div class="piece-ref">{{ p.ref }}</div>
+              <div class="piece-meta">
+                <span class="piece-stock">
+                  <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/></svg>
+                  {{ p.availableQty }} en stock
+                </span>
+              </div>
+              <div class="piece-desc" *ngIf="p.description">{{ p.description }}</div>
+            </div>
+
+            <div class="piece-footer">
+              <div class="piece-price">{{ p.unitPrice | number }} TND</div>
+
+              <button class="btn-add-piece" *ngIf="qtyFor(p.id) === 0" (click)="addPiece(p)">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Commander
+              </button>
+
+              <div class="qty-ctrl" *ngIf="qtyFor(p.id) > 0">
+                <button class="qty-btn" (click)="changeQty(p.id, -1)">−</button>
+                <span class="qty-val">{{ qtyFor(p.id) }}</span>
+                <button class="qty-btn" (click)="changeQty(p.id, +1)">+</button>
+                <button class="qty-remove" (click)="removePiece(p.id)" title="Retirer">
+                  <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </ng-container>
     </div>
 
     <!-- ── RÉCAPITULATIF (step 2) ─────────────────────────────── -->

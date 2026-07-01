@@ -96,6 +96,15 @@ export class StockComponent implements OnInit {
     );
   }
 
+  get catalogGrouped(): { category: string; pieces: SupplierPiece[] }[] {
+    const map = new Map<string, SupplierPiece[]>();
+    this.filteredCatalog.forEach(p => {
+      if (!map.has(p.category)) map.set(p.category, []);
+      map.get(p.category)!.push(p);
+    });
+    return Array.from(map.entries()).map(([category, pieces]) => ({ category, pieces }));
+  }
+
   get orderCount():  number { return Array.from(this.selection.values()).reduce((a, b) => a + b, 0); }
   get orderTotal():  number {
     let total = 0;
@@ -357,7 +366,6 @@ export class StockComponent implements OnInit {
 
   // ── Commandes mécanicien ───────────────────────────────────────
   loadMechOrders(): void {
-    if (this.mechOrders.length) return;
     const u  = this.authService.getCurrentUser()!;
     const me = `${u.firstName} ${u.lastName}`;
     this.mechOrdersLoading = true;
