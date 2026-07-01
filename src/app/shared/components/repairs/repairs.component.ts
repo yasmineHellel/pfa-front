@@ -407,7 +407,10 @@ export class RepairsComponent implements OnInit {
     const qty = this.itemQtyMap[item.id] ?? 1;
     if (qty < 1 || qty > item.quantity) return;
     this.addingPartId = item.id;
-    this.repairService.addPart(this.partsRepair!.id, item.id, qty, this.partsRepair!.vehicleId).subscribe({
+    this.repairService.addPart(
+      this.partsRepair!.id, item.id, qty, this.partsRepair!.vehicleId,
+      { name: item.name, ref: item.ref, unitPrice: item.unitPrice }
+    ).subscribe({
       next: () => {
         // Build updated repair with the new part in usedParts
         const newPart: RepairPart = {

@@ -136,15 +136,28 @@ export class RepairService {
     );
   }
 
-  /** Reserves stock items for a repair via stock service. */
-  addPart(repairId: number, stockItemId: number, quantity: number, vehicleId = 0): Observable<Repair> {
+  /** Reserves stock and persists the used part on the service record. */
+  addPart(
+    repairId: number,
+    stockItemId: number,
+    quantity: number,
+    vehicleId = 0,
+    partInfo?: { name: string; ref: string; unitPrice: number }
+  ): Observable<void> {
     return this.http.post<any>(
       `${environment.stockUrl}/stock/${stockItemId}/reserve`,
       null,
       { params: { quantity: String(quantity), serviceRecordId: String(repairId), vehicleId: String(vehicleId) } }
     ).pipe(
-      switchMap(() => this.getById(repairId)),
-      catchError(() => of(null as any))
+      switchMap(() => {
+        if (!partInfo) return of(null);
+        return this.http.post<any>(
+          `${this.vehiclesUrl}/services/${repairId}/parts`,
+          { stockItemId, name: partInfo.name, ref: partInfo.ref, quantity, unitPrice: partInfo.unitPrice }
+        );
+      }),
+      map(() => void 0),
+      catchError(() => of(void 0))
     );
   }
 
