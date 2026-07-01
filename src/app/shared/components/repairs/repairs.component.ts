@@ -190,7 +190,12 @@ export class RepairsComponent implements OnInit {
     });
 
     this.form.get('clientId')!.valueChanges.subscribe(cid => {
-      this.vehiclesForClient = this.allVehicles.filter(v => v.clientId === +cid);
+      const busyVehicleIds = new Set(
+        this.repairs.filter(r => r.status !== 'termine').map(r => r.vehicleId)
+      );
+      this.vehiclesForClient = this.allVehicles.filter(
+        v => v.clientId === +cid && !busyVehicleIds.has(v.id)
+      );
       this.form.get('vehicleId')!.setValue('');
     });
   }
