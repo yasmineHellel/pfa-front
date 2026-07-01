@@ -58,7 +58,7 @@ export class StockService {
     const productBody = {
       code:        item.ref  || `REF-${Date.now()}`,
       name:        item.name,
-      description: '',
+      description: (item as any).description ?? '',
       unitPrice:   item.unitPrice,
       category:    item.category,
       supplier:    item.supplierName || '',
