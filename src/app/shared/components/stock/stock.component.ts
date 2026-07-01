@@ -278,7 +278,7 @@ export class StockComponent implements OnInit {
     this.addError      = '';
     const v = this.addPieceForm.value;
     const u = this.authService.getCurrentUser()!;
-    const supplierName = u.company || `${u.firstName} ${u.lastName}`;
+    const supplierName = `${u.firstName} ${u.lastName}`;
 
     this.stockService.create({
       name:        v.name,
