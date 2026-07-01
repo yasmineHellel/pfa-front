@@ -61,6 +61,12 @@ export class StockComponent implements OnInit {
   editSubmitting    = false;
   editError         = '';
 
+  // Add piece modal (fournisseur)
+  showAddPieceModal = false;
+  addPieceForm!:    FormGroup;
+  addSubmitting     = false;
+  addError          = '';
+
   // Expand order rows
   expandedOrderId: number | null = null;
 
@@ -247,6 +253,62 @@ export class StockComponent implements OnInit {
       error: err => {
         this.editError      = err.error?.message || 'Erreur lors de la mise à jour.';
         this.editSubmitting = false;
+      }
+    });
+  }
+
+  openAddPiece(): void {
+    this.addError  = '';
+    this.addPieceForm = this.fb.group({
+      name:        ['', Validators.required],
+      ref:         [''],
+      category:    ['Autre', Validators.required],
+      unitPrice:   [0, [Validators.required, Validators.min(0)]],
+      quantity:    [0, [Validators.required, Validators.min(0)]],
+      description: [''],
+    });
+    this.showAddPieceModal = true;
+  }
+
+  closeAddPiece(): void { this.showAddPieceModal = false; }
+
+  submitAddPiece(): void {
+    if (this.addPieceForm.invalid) { this.addPieceForm.markAllAsTouched(); return; }
+    this.addSubmitting = true;
+    this.addError      = '';
+    const v = this.addPieceForm.value;
+    const u = this.authService.getCurrentUser()!;
+    const supplierName = u.company || `${u.firstName} ${u.lastName}`;
+
+    this.stockService.create({
+      name:        v.name,
+      ref:         v.ref || `REF-${Date.now()}`,
+      category:    v.category,
+      unitPrice:   +v.unitPrice,
+      quantity:    +v.quantity,
+      supplierId:  u.id,
+      supplierName,
+      description: v.description,
+    } as any).subscribe({
+      next: created => {
+        this.myPieces.unshift({
+          id:           created.id,
+          ref:          created.ref,
+          name:         created.name,
+          category:     created.category,
+          categoryColor: created.categoryColor,
+          unitPrice:    created.unitPrice,
+          availableQty: created.quantity,
+          supplierId:   u.id,
+          supplierName,
+          description:  v.description,
+        });
+        this.closeAddPiece();
+        this.addSubmitting = false;
+      },
+      error: err => {
+        this.addError      = err.error?.message || 'Erreur lors de la création.';
+        this.addSubmitting = false;
       }
     });
   }
