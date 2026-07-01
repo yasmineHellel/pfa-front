@@ -326,10 +326,15 @@ export class RepairsComponent implements OnInit {
     this.repairService.update(r.id, payload).subscribe({
       next: updated => {
         const idx = this.repairs.findIndex(x => x.id === r.id);
-        if (idx !== -1) this.repairs[idx] = updated;
+        if (idx !== -1) {
+          // Preserve usedParts from local state — backend has no usedParts field
+          const existingParts = this.repairs[idx].usedParts ?? [];
+          this.repairs[idx] = { ...updated, usedParts: existingParts };
+        }
         this.applyFilter();
-        // sync detail panel if open
-        if (this.selectedRepair?.id === r.id) this.selectedRepair = updated;
+        if (this.selectedRepair?.id === r.id) {
+          this.selectedRepair = { ...updated, usedParts: this.repairs[idx]?.usedParts ?? [] };
+        }
         this.closeModal();
         this.submitting = false;
       },
@@ -418,12 +423,14 @@ export class RepairsComponent implements OnInit {
         };
         this.partsRepair = this.syncRepair(updatedRepair);
 
-        // Decrement local stock copy
-        const idx = this.stockItems.findIndex(s => s.id === item.id);
-        if (idx !== -1) {
-          this.stockItems[idx] = { ...this.stockItems[idx], quantity: this.stockItems[idx].quantity - qty };
-          if (this.stockItems[idx].quantity <= 0) this.stockItems.splice(idx, 1);
+        // Decrement local stock copy and force Angular change detection via new array ref
+        const stockIdx = this.stockItems.findIndex(s => s.id === item.id);
+        if (stockIdx !== -1) {
+          const newItems = [...this.stockItems];
+          newItems[stockIdx] = { ...newItems[stockIdx], quantity: newItems[stockIdx].quantity - qty };
+          if (newItems[stockIdx].quantity <= 0) newItems.splice(stockIdx, 1);
           else this.itemQtyMap[item.id] = 1;
+          this.stockItems = newItems;
         }
         this.addingPartId = null;
       },
