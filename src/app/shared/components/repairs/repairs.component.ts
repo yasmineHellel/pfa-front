@@ -402,9 +402,22 @@ export class RepairsComponent implements OnInit {
     const qty = this.itemQtyMap[item.id] ?? 1;
     if (qty < 1 || qty > item.quantity) return;
     this.addingPartId = item.id;
-    this.repairService.addPart(this.partsRepair!.id, item.id, qty).subscribe({
-      next: updated => {
-        this.partsRepair = this.syncRepair(updated);
+    this.repairService.addPart(this.partsRepair!.id, item.id, qty, this.partsRepair!.vehicleId).subscribe({
+      next: () => {
+        // Build updated repair with the new part in usedParts
+        const newPart: RepairPart = {
+          stockItemId: item.id,
+          name:        item.name,
+          ref:         item.ref,
+          quantity:    qty,
+          unitPrice:   item.unitPrice,
+        };
+        const updatedRepair: Repair = {
+          ...this.partsRepair!,
+          usedParts: [...(this.partsRepair!.usedParts ?? []), newPart],
+        };
+        this.partsRepair = this.syncRepair(updatedRepair);
+
         // Decrement local stock copy
         const idx = this.stockItems.findIndex(s => s.id === item.id);
         if (idx !== -1) {
@@ -420,17 +433,17 @@ export class RepairsComponent implements OnInit {
 
   removePartFromRepair(p: RepairPart): void {
     this.removingPartId = p.stockItemId;
-    this.repairService.removePart(this.partsRepair!.id, p.stockItemId).subscribe({
-      next: updated => {
-        this.partsRepair  = this.syncRepair(updated);
-        this.removingPartId = null;
-        // Refresh stock list
-        this.stockItems = [];
-        this.itemQtyMap = {};
-        this.loadMechStock();
-      },
-      error: () => { this.removingPartId = null; }
-    });
+    // Remove part from local state immediately
+    const updatedRepair: Repair = {
+      ...this.partsRepair!,
+      usedParts: (this.partsRepair!.usedParts ?? []).filter(x => x.stockItemId !== p.stockItemId),
+    };
+    this.partsRepair    = this.syncRepair(updatedRepair);
+    this.removingPartId = null;
+    // Refresh available stock list to show the returned item
+    this.stockItems = [];
+    this.itemQtyMap = {};
+    this.loadMechStock();
   }
 
   private syncRepair(updated: Repair): Repair {
