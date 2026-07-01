@@ -284,6 +284,9 @@ export class RepairsComponent implements OnInit {
 
     this.repairService.create({
       clientId, clientName, clientPhone, vehicleId, vehicleName, plate,
+      vehicleMake:  v.vehicleBrand  || '',
+      vehicleModel: v.vehicleModel  || '',
+      vehicleYear:  +v.vehicleYear  || new Date().getFullYear(),
       description:  v.description,
       mechanicName: `${u.firstName} ${u.lastName}`,
       status:       v.status,

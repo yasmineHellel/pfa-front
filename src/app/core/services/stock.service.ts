@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, forkJoin, of } from 'rxjs';
-import { map, switchMap, catchError } from 'rxjs/operators';
+import { Observable, forkJoin, of, iif } from 'rxjs';
+import { map, switchMap, catchError, mergeMap } from 'rxjs/operators';
 import { StockItem, SupplierPiece, Order } from '../models/models';
 import { environment } from '../../../environments/environment';
 
@@ -140,8 +140,31 @@ export class StockService {
     if (data.unitPrice   !== undefined) body.unitPrice   = data.unitPrice;
     if (data.description !== undefined) body.description = data.description;
     if (data.name        !== undefined) body.name        = data.name;
-    return this.http.put<any>(`${this.stockUrl}/catalog/piece/${id}`, body).pipe(
-      map(p => this.mapToCatalogItem(p))
+
+    const updateProduct$ = this.http.put<any>(`${this.stockUrl}/catalog/piece/${id}`, body);
+
+    if (data.availableQty === undefined) {
+      return updateProduct$.pipe(map(p => this.mapToCatalogItem(p)));
+    }
+
+    // Also update stock quantity: read current qty, then add or remove the delta
+    return updateProduct$.pipe(
+      switchMap(p =>
+        this.http.get<any>(`${this.stockUrl}/${id}`).pipe(
+          catchError(() => of({ availableQuantity: 0 })),
+          switchMap(stock => {
+            const currentQty = stock.availableQuantity ?? stock.quantity ?? 0;
+            const delta = data.availableQty! - currentQty;
+            if (delta === 0) return of(p);
+            const endpoint = delta > 0 ? 'add' : 'remove';
+            const qty = Math.abs(delta);
+            return this.http.post<any>(`${this.stockUrl}/${id}/${endpoint}`, null, {
+              params: new HttpParams().set('quantity', String(qty)).set('reference', 'mise-a-jour-manuelle'),
+            }).pipe(catchError(() => of(p)));
+          }),
+          map(() => this.mapToCatalogItem({ ...p, availableQty: data.availableQty }))
+        )
+      )
     );
   }
 

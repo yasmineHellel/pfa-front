@@ -314,13 +314,7 @@ export class StockComponent implements OnInit {
     this.loading = true;
     this.stockService.getAll().subscribe({
       next: data => {
-        if (this.isMecanicien) {
-          const u  = this.authService.getCurrentUser()!;
-          const me = `${u.firstName} ${u.lastName}`;
-          this.items = data.filter(i => i.mechanicName === me);
-        } else {
-          this.items = data;
-        }
+        this.items    = data;
         this.filtered = [...this.items];
         this.loading  = false;
       },
