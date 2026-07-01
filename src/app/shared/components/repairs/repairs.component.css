@@ -617,6 +617,10 @@ textarea { resize: vertical; min-height: 80px; }
 .inv-line-row {
   display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
 }
+.inv-line-readonly {
+  padding: 8px 10px; background: #f9fafb; border-radius: 8px;
+  font-size: 13.5px; color: #374151;
+}
 .inv-input {
   border: 1.5px solid #e5e7eb; border-radius: 8px;
   padding: 7px 10px; font-size: 13px; font-family: 'DM Sans', sans-serif;

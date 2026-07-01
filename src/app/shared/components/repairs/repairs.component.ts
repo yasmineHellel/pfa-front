@@ -6,7 +6,7 @@ import { ClientService }  from '../../../core/services/client.service';
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { AuthService }    from '../../../core/services/auth.service';
 import { StockService }   from '../../../core/services/stock.service';
-import { Repair, Client, Vehicle, InvoiceLine, RepairInvoice, RepairPart, StockItem } from '../../../core/models/models';
+import { Repair, Client, Vehicle, RepairInvoice, RepairPart, StockItem } from '../../../core/models/models';
 
 type ClientMode  = 'existing' | 'new';
 type VehicleMode = 'existing' | 'new';
@@ -468,7 +468,6 @@ export class RepairsComponent implements OnInit {
   // ── Facture ────────────────────────────────────────────────────
   showInvoiceModal  = false;
   invoiceRepair:    Repair | null = null;
-  invoiceLines:     InvoiceLine[] = [];
   laborDescription  = 'Main d\'œuvre';
   laborCost         = 0;
   invoiceSubmitting = false;
@@ -476,15 +475,12 @@ export class RepairsComponent implements OnInit {
   generatedInvoice: RepairInvoice | null = null;
 
   get invoiceTotalParts(): number {
-    return this.invoiceLines.reduce((sum, l) => sum + (l.quantity * l.unitPrice), 0);
+    return (this.invoiceRepair?.usedParts ?? []).reduce((sum, p) => sum + p.quantity * p.unitPrice, 0);
   }
   get invoiceTotal(): number { return this.invoiceTotalParts + this.laborCost; }
 
   openInvoice(r: Repair): void {
-    this.invoiceRepair = r;
-    this.invoiceLines  = r.usedParts && r.usedParts.length
-      ? r.usedParts.map(p => ({ description: p.name, quantity: p.quantity, unitPrice: p.unitPrice }))
-      : [{ description: '', quantity: 1, unitPrice: 0 }];
+    this.invoiceRepair    = r;
     this.laborDescription = 'Main d\'œuvre';
     this.laborCost        = 0;
     this.invoiceError     = '';
@@ -499,14 +495,12 @@ export class RepairsComponent implements OnInit {
     this.generatedInvoice = null;
   }
 
-  addInvoiceLine(): void { this.invoiceLines.push({ description: '', quantity: 1, unitPrice: 0 }); }
-  removeInvoiceLine(i: number): void { this.invoiceLines.splice(i, 1); }
-
   submitInvoice(): void {
     const r = this.invoiceRepair!;
     this.invoiceSubmitting = true;
     this.invoiceError      = '';
     const u = this.authService.getCurrentUser()!;
+    const lines = (r.usedParts ?? []).map(p => ({ description: p.name, quantity: p.quantity, unitPrice: p.unitPrice }));
 
     this.repairService.createInvoice({
       repairId:          r.id,
@@ -520,7 +514,7 @@ export class RepairsComponent implements OnInit {
       repairDescription: r.description,
       entryDate:         r.entryDate,
       invoiceDate:       new Date().toLocaleDateString('fr-TN'),
-      lines:             this.invoiceLines.filter(l => l.description.trim()),
+      lines,
       totalParts:        this.invoiceTotalParts,
       laborDescription:  this.laborDescription,
       laborCost:         this.laborCost,

@@ -682,34 +682,27 @@
         </div>
       </div>
 
-      <!-- Pièces utilisées -->
+      <!-- Pièces utilisées (lecture seule) -->
       <div class="form-section">
-        <div class="section-label-row">
-          <span class="section-label">Pièces utilisées</span>
-          <button type="button" class="btn-add-line" (click)="addInvoiceLine()">
-            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            Ajouter une pièce
-          </button>
+        <div class="section-label">Pièces utilisées</div>
+
+        <div *ngIf="!invoiceRepair?.usedParts?.length" style="color:#9ca3af;font-size:13px;padding:10px 0">
+          Aucune pièce associée à cette réparation.
         </div>
-        <div class="inv-lines-header">
-          <span style="flex:3">Description</span>
-          <span style="flex:1;text-align:center">Qté</span>
-          <span style="flex:1;text-align:right">Prix unit.</span>
-          <span style="flex:1;text-align:right">Total</span>
-          <span style="width:28px"></span>
-        </div>
-        <div class="inv-line-row" *ngFor="let line of invoiceLines; let i = index">
-          <input type="text" class="inv-input flex-3" [(ngModel)]="line.description" placeholder="Nom de la pièce…">
-          <input type="number" class="inv-input inv-qty" [(ngModel)]="line.quantity" min="1">
-          <input type="number" class="inv-input inv-price" [(ngModel)]="line.unitPrice" min="0" placeholder="0">
-          <span class="inv-line-total">{{ (line.quantity * line.unitPrice) | number }} TND</span>
-          <button class="inv-remove-line" (click)="removeInvoiceLine(i)" [disabled]="invoiceLines.length === 1">
-            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
+
+        <div *ngIf="invoiceRepair?.usedParts?.length">
+          <div class="inv-lines-header">
+            <span style="flex:3">Pièce</span>
+            <span style="flex:1;text-align:center">Qté</span>
+            <span style="flex:1;text-align:right">Prix unit.</span>
+            <span style="flex:1;text-align:right">Total</span>
+          </div>
+          <div class="inv-line-row inv-line-readonly" *ngFor="let p of invoiceRepair!.usedParts">
+            <span class="flex-3">{{ p.name }} <small style="color:#9ca3af">{{ p.ref }}</small></span>
+            <span style="flex:1;text-align:center">{{ p.quantity }}</span>
+            <span style="flex:1;text-align:right">{{ p.unitPrice | number }} TND</span>
+            <span class="inv-line-total">{{ (p.quantity * p.unitPrice) | number }} TND</span>
+          </div>
         </div>
       </div>
 
