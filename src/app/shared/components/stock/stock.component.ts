@@ -290,14 +290,15 @@ export class StockComponent implements OnInit {
     const supplierName = `${u.firstName} ${u.lastName}`;
 
     this.stockService.create({
-      name:        v.name,
-      ref:         v.ref || `REF-${Date.now()}`,
-      category:    v.category,
-      unitPrice:   +v.unitPrice,
-      quantity:    +v.quantity,
-      supplierId:  u.id,
+      name:            v.name,
+      ref:             v.ref || `REF-${Date.now()}`,
+      category:        v.category,
+      unitPrice:       +v.unitPrice,
+      quantity:        +v.quantity,
+      supplierId:      u.id,
       supplierName,
-      description: v.description,
+      description:     v.description,
+      supplierCatalog: true,
     } as any).subscribe({
       next: created => {
         this.myPieces.unshift({

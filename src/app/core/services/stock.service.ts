@@ -56,13 +56,14 @@ export class StockService {
 
   create(item: Partial<StockItem>): Observable<StockItem> {
     const productBody = {
-      code:        item.ref  || `REF-${Date.now()}`,
-      name:        item.name,
-      description: (item as any).description ?? '',
-      unitPrice:   item.unitPrice,
-      category:    item.category,
-      supplier:    item.supplierName || '',
-      supplierId:  item.supplierId   || null,
+      code:            item.ref  || `REF-${Date.now()}`,
+      name:            item.name,
+      description:     (item as any).description ?? '',
+      unitPrice:       item.unitPrice,
+      category:        item.category,
+      supplier:        item.supplierName || '',
+      supplierId:      item.supplierId   || null,
+      supplierCatalog: (item as any).supplierCatalog ?? false,
     };
     return this.http.post<any>(this.productsUrl, productBody).pipe(
       switchMap(product => {
