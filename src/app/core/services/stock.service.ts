@@ -115,7 +115,7 @@ export class StockService {
         .set('quantity',   item.quantity.toString())
         .set('unitPrice',  item.unitPrice.toString())
         .set('supplier',   order.supplierName);
-      if ((order as any).mechanicId)   params = params.set('mechanicId',   String((order as any).mechanicId));
+      if (order.mechanicId)  params = params.set('mechanicId', String(order.mechanicId));
       if (order.mechanicName)  params = params.set('mechanicName',  order.mechanicName);
       if (order.mechanicPhone) params = params.set('mechanicPhone', order.mechanicPhone);
       if (order.mechanicEmail) params = params.set('mechanicEmail', order.mechanicEmail);
@@ -138,8 +138,8 @@ export class StockService {
     );
   }
 
-  getOrdersByMechanic(mechanicName: string): Observable<Order[]> {
-    return this.http.get<any[]>(`${this.ordersUrl}/mechanic/${encodeURIComponent(mechanicName)}`).pipe(
+  getOrdersByMechanic(mechanicId: number): Observable<Order[]> {
+    return this.http.get<any[]>(`${this.ordersUrl}/mechanic-id/${mechanicId}`).pipe(
       map(list => list.map(o => this.mapToOrder(o))),
       catchError(() => of([]))
     );

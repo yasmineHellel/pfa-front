@@ -370,10 +370,9 @@ export class StockComponent implements OnInit {
 
   // ── Commandes mécanicien ───────────────────────────────────────
   loadMechOrders(): void {
-    const u  = this.authService.getCurrentUser()!;
-    const me = `${u.firstName} ${u.lastName}`;
+    const u = this.authService.getCurrentUser()!;
     this.mechOrdersLoading = true;
-    this.stockService.getOrdersByMechanic(me).subscribe({
+    this.stockService.getOrdersByMechanic(u.id).subscribe({
       next: data => { this.mechOrders = data; this.mechOrdersLoading = false; },
       error: ()   => { this.mechOrdersLoading = false; }
     });
