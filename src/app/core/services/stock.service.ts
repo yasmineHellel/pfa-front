@@ -229,11 +229,11 @@ export class StockService {
 
   private mapOrderStatusToFrontend(s: string): Order['status'] {
     const map: Record<string, Order['status']> = {
-      PENDING:    'en-attente',
-      PROCESSING: 'en-cours',
-      SHIPPED:    'expediee',
-      DELIVERED:  'livree',
-      CANCELLED:  'annulee',
+      PENDING:     'en-attente',
+      ORDERED:     'en-cours',
+      IN_TRANSIT:  'expediee',
+      RECEIVED:    'livree',
+      CANCELLED:   'annulee',
     };
     return map[s] ?? 'en-attente';
   }
@@ -241,9 +241,9 @@ export class StockService {
   private mapOrderStatusToBackend(s: string): string {
     const map: Record<string, string> = {
       'en-attente': 'PENDING',
-      'en-cours':   'PROCESSING',
-      'expediee':   'SHIPPED',
-      'livree':     'DELIVERED',
+      'en-cours':   'ORDERED',
+      'expediee':   'IN_TRANSIT',
+      'livree':     'RECEIVED',
       'annulee':    'CANCELLED',
     };
     return map[s] ?? 'PENDING';

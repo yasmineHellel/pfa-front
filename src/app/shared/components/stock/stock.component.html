@@ -124,7 +124,8 @@
                 <span *ngIf="!o.mechanicPhone && !o.mechanicEmail" class="td-muted">—</span>
               </td>
               <td>
-                <span class="pieces-summary">{{ o.items.length }} pièce{{ o.items.length !== 1 ? 's' : '' }}</span>
+                <span style="font-weight:600">{{ o.items[0]?.pieceName || '—' }}</span>
+                <span class="td-muted" style="margin-left:6px">× {{ o.items[0]?.quantity || 0 }}</span>
               </td>
               <td><strong style="color:#d97706">{{ o.totalAmount | number }} TND</strong></td>
               <td (click)="$event.stopPropagation()">
@@ -357,7 +358,10 @@
             </td>
             <td class="td-muted">{{ o.date }}</td>
             <td style="font-weight:500">{{ o.supplierName }}</td>
-            <td><span class="pieces-summary">{{ o.items.length }} pièce{{ o.items.length !== 1 ? 's' : '' }}</span></td>
+            <td>
+              <span style="font-weight:600">{{ o.items[0]?.pieceName || '—' }}</span>
+              <span class="td-muted" style="margin-left:6px">× {{ o.items[0]?.quantity || 0 }}</span>
+            </td>
             <td><strong style="color:#d97706">{{ o.totalAmount | number }} TND</strong></td>
             <td>
               <span class="badge" [ngClass]="orderStatusBadge(o.status)">{{ orderStatusLabel(o.status) }}</span>
