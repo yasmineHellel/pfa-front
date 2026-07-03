@@ -451,3 +451,12 @@ input:focus, select:focus { border-color:#f59e0b; box-shadow:0 0 0 3px rgba(245,
 .btn-save:disabled { opacity:.7; cursor:not-allowed; }
 .spinner-white { width:18px; height:18px; border:2px solid rgba(13,17,23,.3); border-top-color:#0d1117; border-radius:50%; animation:spin .7s linear infinite; display:inline-block; }
 @keyframes spin { to { transform:rotate(360deg); } }
+
+.btn-refresh {
+  display:flex; align-items:center; gap:6px;
+  padding:7px 14px; border:1.5px solid #e5e7eb; border-radius:8px;
+  background:#fff; font-size:13px; font-weight:600; color:#374151;
+  cursor:pointer; font-family:'DM Sans',sans-serif; transition:all .15s;
+}
+.btn-refresh:hover:not(:disabled) { border-color:#f59e0b; color:#d97706; background:#fffbeb; }
+.btn-refresh:disabled { opacity:.6; cursor:not-allowed; }
