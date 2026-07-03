@@ -144,13 +144,15 @@ export class StockComponent implements OnInit {
     });
 
     const order: Order = {
-      supplierId:   this.selectedSupplier.id,
-      supplierName: this.selectedSupplier.company || `${this.selectedSupplier.firstName} ${this.selectedSupplier.lastName}`,
-      mechanicName: `${u.firstName} ${u.lastName}`,
+      supplierId:    this.selectedSupplier.id,
+      supplierName:  this.selectedSupplier.company || `${this.selectedSupplier.firstName} ${this.selectedSupplier.lastName}`,
+      mechanicName:  `${u.firstName} ${u.lastName}`,
+      mechanicPhone: (u as any).phone || '',
+      mechanicEmail: u.email || '',
       items,
-      totalAmount:  this.orderTotal,
-      date:         new Date().toLocaleDateString('fr-TN'),
-      status:       'en-attente',
+      totalAmount:   this.orderTotal,
+      date:          new Date().toLocaleDateString('fr-TN'),
+      status:        'en-attente',
     };
 
     this.stockService.sendOrder(order).subscribe({

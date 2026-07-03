@@ -117,6 +117,7 @@ export interface Order {
   supplierName: string;
   mechanicName: string;
   mechanicPhone?: string;
+  mechanicEmail?: string;
   items: OrderItem[];
   totalAmount: number;
   date: string;

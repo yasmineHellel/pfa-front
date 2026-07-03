@@ -118,7 +118,11 @@
                   <span style="font-weight:500">{{ o.mechanicName }}</span>
                 </div>
               </td>
-              <td class="td-muted">{{ o.mechanicPhone || '—' }}</td>
+              <td>
+                <div *ngIf="o.mechanicPhone" class="td-muted">📞 {{ o.mechanicPhone }}</div>
+                <div *ngIf="o.mechanicEmail" class="td-muted" style="font-size:0.78rem">✉ {{ o.mechanicEmail }}</div>
+                <span *ngIf="!o.mechanicPhone && !o.mechanicEmail" class="td-muted">—</span>
+              </td>
               <td>
                 <span class="pieces-summary">{{ o.items.length }} pièce{{ o.items.length !== 1 ? 's' : '' }}</span>
               </td>

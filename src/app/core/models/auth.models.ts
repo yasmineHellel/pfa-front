@@ -6,6 +6,7 @@ export interface User {
   lastName: string;
   email: string;
   role: Role;
+  phone?: string;
 }
 
 export interface LoginRequest {
@@ -31,6 +32,9 @@ export interface BackendAuthResponse {
   username: string;
   email: string;
   role: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
 }
 
 export interface AuthResponse {

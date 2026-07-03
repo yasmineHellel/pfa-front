@@ -95,15 +95,17 @@ export class StockService {
   }
 
   sendOrder(order: Order): Observable<{ message: string }> {
-    const requests = order.items.map(item =>
-      this.http.post<any>(`${this.ordersUrl}`, null, {
-        params: new HttpParams()
-          .set('productId',  item.pieceId.toString())
-          .set('quantity',   item.quantity.toString())
-          .set('unitPrice',  item.unitPrice.toString())
-          .set('supplier',   order.supplierName)
-      })
-    );
+    const requests = order.items.map(item => {
+      let params = new HttpParams()
+        .set('productId',  item.pieceId.toString())
+        .set('quantity',   item.quantity.toString())
+        .set('unitPrice',  item.unitPrice.toString())
+        .set('supplier',   order.supplierName);
+      if (order.mechanicName)  params = params.set('mechanicName',  order.mechanicName);
+      if (order.mechanicPhone) params = params.set('mechanicPhone', order.mechanicPhone);
+      if (order.mechanicEmail) params = params.set('mechanicEmail', order.mechanicEmail);
+      return this.http.post<any>(`${this.ordersUrl}`, null, { params });
+    });
     return forkJoin(requests).pipe(map(() => ({ message: 'Commandes envoyées avec succès.' })));
   }
 
@@ -121,9 +123,10 @@ export class StockService {
     );
   }
 
-  getOrdersByMechanic(_mechanicName: string): Observable<Order[]> {
-    return this.http.get<any[]>(this.ordersUrl).pipe(
-      map(list => list.map(o => this.mapToOrder(o)))
+  getOrdersByMechanic(mechanicName: string): Observable<Order[]> {
+    return this.http.get<any[]>(`${this.ordersUrl}/mechanic/${encodeURIComponent(mechanicName)}`).pipe(
+      map(list => list.map(o => this.mapToOrder(o))),
+      catchError(() => of([]))
     );
   }
 
@@ -205,10 +208,12 @@ export class StockService {
 
   private mapToOrder(o: any): Order {
     return {
-      id:           o.id,
-      supplierId:   o.supplierId  ?? 0,
-      supplierName: o.supplier    ?? o.supplierName ?? '',
-      mechanicName: o.mechanicName ?? '',
+      id:            o.id,
+      supplierId:    o.supplierId  ?? 0,
+      supplierName:  o.supplier    ?? o.supplierName ?? '',
+      mechanicName:  o.mechanicName  ?? '',
+      mechanicPhone: o.mechanicPhone ?? '',
+      mechanicEmail: o.mechanicEmail ?? '',
       items: [{
         pieceId:   o.productId   ?? 0,
         pieceName: o.productName ?? '',

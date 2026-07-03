@@ -43,6 +43,7 @@ export class AuthService {
           lastName:  data.lastName,
           email:     res.email,
           role:      res.role as any,
+          phone:     data.phone || '',
         },
       })),
       tap(res => this.storeSession(res))
@@ -81,13 +82,14 @@ export class AuthService {
 
   private mapResponse(res: BackendAuthResponse): AuthResponse {
     const namePart  = res.username?.split('@')[0] || res.email?.split('@')[0] || 'Utilisateur';
-    const firstName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+    const fallbackFirst = namePart.charAt(0).toUpperCase() + namePart.slice(1);
     const user: User = {
       id:        res.userId,
-      firstName,
-      lastName:  '',
+      firstName: res.firstName || fallbackFirst,
+      lastName:  res.lastName  || '',
       email:     res.email,
-      role:      res.role as any
+      role:      res.role as any,
+      phone:     res.phone     || '',
     };
     return { token: res.accessToken, user };
   }
