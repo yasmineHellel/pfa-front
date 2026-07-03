@@ -405,9 +405,9 @@ export class StockComponent implements OnInit {
   // ── Fournisseurs inscrits ──────────────────────────────────────
   loadSuppliers(): void {
     this.suppliersLoading = true;
-    this.userService.getAll().subscribe({
+    this.userService.getSuppliers().subscribe({
       next: users => {
-        this.registeredSuppliers = users.filter(u => u.role === 'FOURNISSEUR');
+        this.registeredSuppliers = users;
         this.suppliersLoading    = false;
       },
       error: () => { this.suppliersLoading = false; }

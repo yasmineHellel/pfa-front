@@ -14,6 +14,10 @@ export class UserService {
     return this.http.get<ManagedUser[]>(this.apiUrl);
   }
 
+  getSuppliers(): Observable<ManagedUser[]> {
+    return this.http.get<ManagedUser[]>(`${this.apiUrl}/suppliers`);
+  }
+
   toggleActive(id: number): Observable<ManagedUser> {
     return this.http.patch<ManagedUser>(`${this.apiUrl}/${id}/toggle`, {});
   }
