@@ -124,17 +124,10 @@ export class StockService {
     return forkJoin(requests).pipe(map(() => ({ message: 'Commandes envoyées avec succès.' })));
   }
 
-  getOrdersBySupplier(supplierId: number, supplierName?: string): Observable<Order[]> {
-    if (supplierName) {
-      return this.http.get<any[]>(`${this.ordersUrl}/supplier/${encodeURIComponent(supplierName)}`).pipe(
-        map(list => list.map(o => this.mapToOrder(o))),
-        catchError(() => this.http.get<any[]>(this.ordersUrl).pipe(
-          map(list => list.filter(o => o.supplierId === supplierId).map(o => this.mapToOrder(o)))
-        ))
-      );
-    }
-    return this.http.get<any[]>(this.ordersUrl).pipe(
-      map(list => list.map(o => this.mapToOrder(o)))
+  getOrdersBySupplier(supplierId: number): Observable<Order[]> {
+    return this.http.get<any[]>(`${this.ordersUrl}/supplier-id/${supplierId}`).pipe(
+      map(list => list.map(o => this.mapToOrder(o))),
+      catchError(() => of([]))
     );
   }
 
@@ -226,6 +219,7 @@ export class StockService {
       id:            o.id,
       supplierId:    o.supplierId  ?? 0,
       supplierName:  o.supplier    ?? o.supplierName ?? '',
+      mechanicId:    o.mechanicId  ?? undefined,
       mechanicName:  o.mechanicName  ?? '',
       mechanicPhone: o.mechanicPhone ?? '',
       mechanicEmail: o.mechanicEmail ?? '',
