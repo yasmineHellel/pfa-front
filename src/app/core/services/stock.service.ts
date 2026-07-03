@@ -27,6 +27,20 @@ export class StockService {
     );
   }
 
+  getMechanicStock(mechanicId: number): Observable<StockItem[]> {
+    return forkJoin({
+      products: this.http.get<any[]>(`${this.productsUrl}/mechanic/${mechanicId}`).pipe(catchError(() => of([]))),
+      stocks:   this.http.get<any[]>(this.stockUrl).pipe(catchError(() => of([]))),
+    }).pipe(
+      map(({ products, stocks }) =>
+        products.map(p => {
+          const s = stocks.find((st: any) => st.productId === p.id) || {};
+          return this.mapToStockItem(p, s);
+        })
+      )
+    );
+  }
+
   getById(id: number): Observable<StockItem> {
     return forkJoin({
       product: this.http.get<any>(`${this.productsUrl}/${id}`),
@@ -101,6 +115,7 @@ export class StockService {
         .set('quantity',   item.quantity.toString())
         .set('unitPrice',  item.unitPrice.toString())
         .set('supplier',   order.supplierName);
+      if ((order as any).mechanicId)   params = params.set('mechanicId',   String((order as any).mechanicId));
       if (order.mechanicName)  params = params.set('mechanicName',  order.mechanicName);
       if (order.mechanicPhone) params = params.set('mechanicPhone', order.mechanicPhone);
       if (order.mechanicEmail) params = params.set('mechanicEmail', order.mechanicEmail);

@@ -146,6 +146,7 @@ export class StockComponent implements OnInit {
     const order: Order = {
       supplierId:    this.selectedSupplier.id,
       supplierName:  this.selectedSupplier.company || `${this.selectedSupplier.firstName} ${this.selectedSupplier.lastName}`,
+      mechanicId:    u.id,
       mechanicName:  `${u.firstName} ${u.lastName}`,
       mechanicPhone: (u as any).phone || '',
       mechanicEmail: u.email || '',
@@ -385,7 +386,12 @@ export class StockComponent implements OnInit {
   // ── Stock ──────────────────────────────────────────────────────
   loadStock(): void {
     this.loading = true;
-    this.stockService.getAll().subscribe({
+    const u = this.authService.getCurrentUser();
+    const stock$ = this.isMecanicien && u
+      ? this.stockService.getMechanicStock(u.id)
+      : this.stockService.getAll();
+
+    stock$.subscribe({
       next: data => {
         this.items    = data;
         this.filtered = [...this.items];

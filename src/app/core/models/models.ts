@@ -115,6 +115,7 @@ export interface Order {
   id?: number;
   supplierId: number;
   supplierName: string;
+  mechanicId?: number;
   mechanicName: string;
   mechanicPhone?: string;
   mechanicEmail?: string;
